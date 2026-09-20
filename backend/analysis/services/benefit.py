@@ -33,7 +33,7 @@ SENSITIVITY_KEYS = (
     "dp_power_loss_coeff",
     "outage_days",
 )
-SENSITIVITY_DELTA = 0.30
+SENSITIVITY_DELTA = 0.30  # 폴백. 실제 값은 설정(sensitivity_delta_pct)에서 읽는다.
 
 
 @dataclass
@@ -401,7 +401,8 @@ def compute(
 
     best_offset, best_net = optimal_offset(fi_now, slope_per_day, recoverable, total_cost, params)
     scenarios = build_scenarios(fi_now, slope_per_day, recoverable, total_cost, params, eta_days)
-    sensitivity = sensitivity_analysis(net_for, params) if with_sensitivity else []
+    delta = float(params.get("sensitivity_delta_pct", SENSITIVITY_DELTA * 100)) / 100
+    sensitivity = sensitivity_analysis(net_for, params, delta) if with_sensitivity else []
 
     return BenefitResult(
         params_snapshot=dict(params),

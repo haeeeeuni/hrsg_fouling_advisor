@@ -4,15 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 현재 상태
 
-**Phase 5(M5, 이력·리포트)까지 구현된 상태다.** 마일스톤은 `PROJECT.md` §6 (M0 명세 → M8 안정화).
+**Phase 7(M7, 옵션 기능)까지 구현된 상태다.** 마일스톤은 `PROJECT.md` §6 (M0 명세 → M8 안정화).
 
-- **있음:** `accounts`·`units`·`ingestion`(Phase 1~2),
-  `analysis`(정제·구간분류·군집화·기대값모델·FI·추세/D-day·편익·세정전후비교 + pipeline + API),
-  `maintenance`(정비이력 업로드·키워드 추출·승인 워크플로·세정이력·키워드 사전),
-  `reports`(PDF/엑셀 생성기 + 나눔고딕 동봉 + 다운로드),
-  `common`, `seed_defaults`, `scripts/generate_sample_data.py`,
-  Vue SPA(로그인·대시보드·업로드·분석실행·정비이력·전후비교·리포트·관리자 콘솔 4종).
-- **없음:** 설정·사용자·모델 관리 화면과 감사 로그(Phase 6), 옵션 기능(Phase 7).
+- **있음:** `accounts`(인증 + 사용자 관리 + 로그인 이력), `units`(호기·매핑·설정 + 호기별 오버라이드),
+  `ingestion`, `analysis`(분석 전 단계 + 모델 관리·재학습·청정 기준 기간 + **자동 재계산·백테스트·호기 간 비교**),
+  `maintenance`, `reports`, `common`(에러 포맷·job 추상화·**감사 로그**), `seed_defaults`,
+  `scripts/generate_sample_data.py`, Vue SPA(사용자 화면 7종 + 관리자 콘솔 12종).
+- **남은 것:** M8 안정화 — 실제 PostgreSQL·Node 환경에서의 전체 테스트 수행과 성능 측정.
+
+**AC-13-4(하드코딩 없음)는 `analysis/tests/test_no_hardcoded_settings.py` 가 상시 검사한다.**
+로직 한가운데 매직 넘버는 금지, 이름 붙은 모듈 상수 폴백과 함수 기본 인자는 허용이다
+(AGENTS.md §1.2 "코드에는 초기 시드값만 둔다").
 
 `specs/17` §6의 9단계 통합 시나리오는 `analysis/tests/test_integration_scenario.py` 로 고정돼 있다.
 
@@ -68,6 +70,17 @@ Measurement (원본, 불변)
   서버에서 한글이 네모가 된다 → 차트는 항상 `reports.pdf.fonts.font_properties()` 를 넘긴다.
   나눔고딕에 `℃`(U+2103)·`−`(U+2212) 글리프가 없어 PDF 출력 전 `pdf_safe()` 로 치환한다(엑셀은 불필요).
 - **추출된 세정 후보는 승인 전까지 `CleaningEvent` 가 아니다**(오탐 방지). 세정 이력을 지워도 과거 분석 수치는 스냅샷이라 불변이다.
+- **재학습한 모델은 비활성으로 저장된다.** 관리자가 신·구 지표를 비교하고 승인해야 활성화되며, 그 전까지 기존 활성 모델이 쓰인다(AC-06-5).
+- **설정 변경은 다음 분석부터 적용된다.** 기존 결과는 `settings_snapshot` 을 보관하므로 바뀌지 않는다(AC-13-1).
+- **관리자 변경은 전부 `AuditLog` 에 남는다**(사용자·호기·매핑·설정·세정이력·키워드·모델활성화·배치롤백). 비밀번호는 스냅샷에서 제외한다.
+- **백테스트의 컷오프는 파이프라인 전체를 관통한다.** `PipelineContext.cutoff` 가 걸리면 (1) 데이터 조회 상한,
+  (2) 청정 기준 기간 후보, (3) 세정 이력 기반 추세 절단 기준 세 지점이 모두 그 시각에서 잘린다.
+  **한 곳만 빠뜨려도 미래를 엿본 결과가 나오고, 그래도 예외 없이 그럴듯한 숫자가 나온다**(AC-19-4).
+  또한 컷오프 실행은 `ClusterDefinition`·`ModelVersion` 을 저장하지 않는다 — 과거 시점 재현이 운영 모델을 덮으면 안 된다.
+- **자동 재계산은 기준 분석의 `settings_snapshot` 을 그대로 쓴다.** 그래야 결과 변화가 설정 변경이 아니라
+  데이터 변화에서만 나온다(AC-19-3). 모델 자동 재학습은 **기본 꺼짐** — 오염이 진행된 구간으로 학습하면 기준 자체가 오염된다.
+- **호기 간 비교는 FI·잔차 기반 지표만 쓴다.** 절대 차압·스택온도는 설비마다 달라 비교가 성립하지 않는다(`19` §3.2).
+  우선순위 점수는 **비교 대상 호기들 사이의 상대 순위**일 뿐 절대 오염도가 아니므로 근거 지표를 반드시 함께 보여준다.
 
 ## 지켜야 할 시스템 불변식
 
@@ -99,6 +112,8 @@ Measurement (원본, 불변)
   **구조 오류**(컬럼 누락·중복 헤더·필수 항목 미매핑)만 적재를 차단하고, 행 단위 오류(타임스탬프 해석 실패 등)는 해당 행만 제외하고 진행한다(`specs/03` §4.4).
 - **차트 데이터는 일 단위 집계로 반환**한다. 원시 포인트를 그대로 내려보내지 않는다(`specs/18` §1).
 - 편익 파라미터만 바꿔 다시 계산할 때는 분석 전체를 재실행하지 않고 `POST /api/analysis-runs/{id}/recalculate-benefit/` 를 쓴다.
+- **`/api/units/comparison/` 은 `analysis/urls.py` 에 있고, `config/urls.py` 에서 `analysis` 를 `units` 보다 먼저 include 한다.**
+  순서를 되돌리면 units 라우터의 `units/{pk}/` 가 `comparison` 을 pk 로 먹어버린다.
 
 ## 명령어
 
@@ -118,6 +133,8 @@ celery -A config worker -l info   # 별도 터미널. 업로드 검증·적재�
 pytest
 pytest analysis/tests/test_fouling_index.py::test_ac_07_4_fi_never_leaves_zero_hundred  # 단일 테스트
 pytest analysis/tests/test_integration_scenario.py   # specs/17 §6 9단계 통합 시나리오
+pytest analysis/tests/test_backtest_no_leakage.py    # AC-19-4 미래 정보 누설 차단
+pytest -m "not django_db"           # PostgreSQL 없이 돌릴 수 있는 순수 함수 테스트만
 pytest --cov=analysis/services      # 커버리지 80% 이상이 기준
 
 # 샘플 데이터 (전 파이프라인 검증의 기준 데이터)

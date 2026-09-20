@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 
 import * as unitsApi from '@/api/units'
+import AutoRecalcForm from '@/components/admin/AutoRecalcForm.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useToast } from '@/composables/useToast'
 import { useUnitsStore } from '@/stores/units'
@@ -194,6 +195,11 @@ async function remove(unit) {
           <button class="btn btn-outline-secondary" @click="editing = null">취소</button>
         </div>
       </div>
+    </div>
+
+    <!-- specs/19 §1 — 선택된 호기의 자동 재계산 설정 -->
+    <div v-if="store.selectedUnitId" class="mt-4">
+      <AutoRecalcForm :key="store.selectedUnitId" :unit-id="store.selectedUnitId" />
     </div>
   </div>
 </template>

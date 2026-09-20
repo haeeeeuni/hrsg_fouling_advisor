@@ -115,7 +115,11 @@ def select_window(
 # --- 개별 모델 적합 ---
 
 
-def _weights(frame: pd.DataFrame) -> np.ndarray:
+# 신뢰도별 회귀 가중치 기본값. 실제 값은 설정(trend_confidence_weights)에서 읽는다.
+DEFAULT_CONFIDENCE_WEIGHTS: dict[str, float] = {"HIGH": 1.0, "MEDIUM": 0.7, "LOW": 0.4}
+
+
+def _weights(frame: pd.DataFrame, confidence_weights: dict | None = None) -> np.ndarray:
     """표본 수와 신뢰도를 회귀 가중치로 쓴다 (specs/08 §4)."""
     counts = frame.get("sample_count")
     weights = (
@@ -125,7 +129,8 @@ def _weights(frame: pd.DataFrame) -> np.ndarray:
 
     confidence = frame.get("confidence")
     if confidence is not None:
-        factor = confidence.map({"HIGH": 1.0, "MEDIUM": 0.7, "LOW": 0.4}).fillna(1.0)
+        mapping = confidence_weights or DEFAULT_CONFIDENCE_WEIGHTS
+        factor = confidence.map(mapping).fillna(1.0)
         weights = weights * factor.to_numpy(dtype=float)
     return weights
 
@@ -338,7 +343,7 @@ def forecast(
     fit_end = frame["date"].max()
     t = (frame["date"] - fit_start).dt.days.to_numpy(dtype=float)
     y = frame["fi_value"].to_numpy(dtype=float)
-    weights = _weights(frame)
+    weights = _weights(frame, config.get("trend_confidence_weights"))
 
     fits = fit_all(t, y, weights)
     chosen = choose(fits, config.get("trend_model", MODEL_AUTO))

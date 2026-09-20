@@ -17,7 +17,7 @@ const items = computed(() => {
   ]
   // 관리자 메뉴는 일반 사용자에게 보이지 않는다 (AC-16-2).
   if (auth.isAdmin) {
-    base.push({ to: { name: 'admin-units' }, label: '관리자 콘솔', icon: 'bi-gear' })
+    base.push({ to: { name: 'admin-users' }, label: '관리자 콘솔', icon: 'bi-gear' })
   }
   return base
 })

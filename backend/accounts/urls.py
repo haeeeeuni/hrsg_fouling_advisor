@@ -1,4 +1,4 @@
-"""/api/auth/ (specs/15 §2)."""
+"""/api/auth/ (specs/15 §2) 및 사용자 관리 (specs/15 §3)."""
 
 from django.urls import path
 

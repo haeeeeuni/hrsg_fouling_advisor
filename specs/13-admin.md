@@ -127,6 +127,15 @@ UnitSetting            # 호기별 오버라이드
 | `max_forecast_days` | 730 |
 | `login_max_failures` | 5 |
 | `login_lockout_minutes` | 5 |
+| `priority_weights` | `{"fi":0.30,"slope":0.20,"daily_loss":0.35,"urgency":0.15}` |
+| `backtest_lookahead_days` | `[30, 60, 90]` |
+| `backtest_hit_window_days` | 30 |
+| `auto_recalc_rolling_months` | 12 |
+
+> **추가 근거(2026-09-21, Phase 7):** `19-optional-features.md` 의 우선순위 가중치(§3.3), 백테스트 컷오프 지점과
+> ±30일 적중 판정 폭(§2.2), 자동 재계산 기본 창(§1.2)은 모두 튜닝 가능한 값이므로 설정으로 옮겼다(AGENTS.md §1.2).
+> `priority_weights` 는 네 항목이 한 덩어리로만 의미가 있어 JSON 한 건으로 두고, 합이 1인지 검증한다
+> (`units/settings_validation.py` 의 `check_json_weights`).
 
 > **추가 근거(2026-09-20, Phase 1):** `01-auth-and-users.md` §3.2의 로그인 잠금 규칙("실패 5회 연속 시 5분 차단")은
 > 튜닝 가능한 임계값이므로 코드에 고정하지 않고 설정값으로 옮겼다(AGENTS.md §1.2).

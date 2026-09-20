@@ -1,6 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 
+import NotificationBell from '@/components/common/NotificationBell.vue'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import { useUnitsStore } from '@/stores/units'
@@ -40,24 +41,28 @@ async function onLogout() {
       </select>
     </div>
 
-    <div class="ms-auto dropdown">
-      <button
-        class="btn btn-sm btn-outline-light dropdown-toggle"
-        type="button"
-        data-bs-toggle="dropdown"
-        aria-expanded="false"
-      >
-        {{ auth.user?.full_name }} ({{ auth.user?.employee_no }})
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li>
-          <RouterLink class="dropdown-item" :to="{ name: 'profile' }">내 정보</RouterLink>
-        </li>
-        <li><hr class="dropdown-divider" /></li>
-        <li>
-          <button class="dropdown-item" type="button" @click="onLogout">로그아웃</button>
-        </li>
-      </ul>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <NotificationBell />
+
+      <div class="dropdown">
+        <button
+          class="btn btn-sm btn-outline-light dropdown-toggle"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          {{ auth.user?.full_name }} ({{ auth.user?.employee_no }})
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <RouterLink class="dropdown-item" :to="{ name: 'profile' }">내 정보</RouterLink>
+          </li>
+          <li><hr class="dropdown-divider" /></li>
+          <li>
+            <button class="dropdown-item" type="button" @click="onLogout">로그아웃</button>
+          </li>
+        </ul>
+      </div>
     </div>
   </nav>
 </template>

@@ -19,8 +19,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdminRole
-from common import jobs
+from common import audit, jobs
 from common.exceptions import Conflict, DomainError, NotFound, ValidationError
+from common.models import AuditAction
 from ingestion import tasks
 from ingestion.models import BatchStatus, Measurement, UploadBatch, UploadKind
 from ingestion.serializers import (
@@ -181,6 +182,14 @@ class UploadBatchViewSet(viewsets.ReadOnlyModelViewSet):
         batch.status = BatchStatus.CANCELED
         batch.row_loaded = 0
         batch.save(update_fields=["status", "row_loaded"])
+        audit.record(
+            request=request,
+            action=AuditAction.ROLLBACK,
+            target_type="UploadBatch",
+            target_id=batch.id,
+            target_label=f"{batch.unit.code} {batch.original_filename}",
+            after={"deleted_rows": deleted},
+        )
         logger.info("upload batch rolled back batch_id=%s rows=%s", batch.id, deleted)
         return Response({"deleted_rows": deleted}, status=status.HTTP_200_OK)
 

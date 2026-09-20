@@ -15,7 +15,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import IsAdminRole
+from common import audit
+from common.audit import AuditedModelMixin
 from common.exceptions import Conflict, ValidationError
+from common.models import AuditAction
 from ingestion.models import Measurement
 from ingestion.services import reader
 from ingestion.services.transform import apply_mapping, mapping_specs_from_rows
@@ -42,9 +45,10 @@ class StandardFieldListView(APIView):
         return Response(data)
 
 
-class UnitViewSet(viewsets.ModelViewSet):
+class UnitViewSet(AuditedModelMixin, viewsets.ModelViewSet):
     queryset = Unit.objects.all().prefetch_related("column_mappings")
     serializer_class = UnitSerializer
+    audit_target_type = "Unit"
     search_fields = ["code", "name", "plant_name"]
     ordering_fields = ["code", "name", "created_at"]
 
@@ -61,6 +65,9 @@ class UnitViewSet(viewsets.ModelViewSet):
             qs = qs.filter(is_active=is_active.lower() in {"1", "true", "yes"})
         return qs
 
+    def audit_label(self, instance: Unit) -> str:
+        return f"{instance.code} {instance.name}"
+
     def perform_destroy(self, instance: Unit) -> None:
         # 운전 데이터·분석 이력이 있으면 물리 삭제 불가 (specs/02 §2)
         if instance.measurements.exists() or instance.upload_batches.exists():
@@ -68,7 +75,7 @@ class UnitViewSet(viewsets.ModelViewSet):
                 code="UNIT_HAS_DATA",
                 message="데이터가 있는 호기는 삭제할 수 없습니다. 비활성화를 사용하세요.",
             )
-        instance.delete()
+        super().perform_destroy(instance)
 
     @action(detail=True, methods=["get"], url_path="data-summary")
     def data_summary(self, request: Request, pk: str | None = None) -> Response:
@@ -131,6 +138,15 @@ class ColumnMappingView(APIView):
         )
 
         unit.refresh_from_db()
+        audit.record(
+            request=request,
+            action=AuditAction.UPDATE,
+            target_type="ColumnMapping",
+            target_id=unit.id,
+            target_label=f"{unit.code} 매핑 v{next_version}",
+            before={"version": next_version - 1},
+            after={"version": next_version, "mappings": rows},
+        )
         return Response(
             {
                 "mappings": ColumnMappingSerializer(unit.column_mappings.all(), many=True).data,

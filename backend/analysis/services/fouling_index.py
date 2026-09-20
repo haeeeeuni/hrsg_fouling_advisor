@@ -31,6 +31,9 @@ CONFIDENCE_LOW = "LOW"
 
 SIGMA_FLOOR = 1e-6  # σ≈0 하한 (specs/07 §7)
 
+# 실제 값은 설정(out_of_domain_ratio_max)에서 읽는다 — 여기는 폴백이다.
+DEFAULT_OUT_OF_DOMAIN_MAX = 0.30
+
 
 @dataclass
 class FoulingResult:
@@ -222,10 +225,18 @@ def current_value(daily: pd.DataFrame, window_days: int) -> tuple[float | None, 
 
 
 def confidence_of(
-    model_grades: list[str], valid_points: int, min_points: int, out_of_domain_ratio: float
+    model_grades: list[str],
+    valid_points: int,
+    min_points: int,
+    out_of_domain_ratio: float,
+    out_of_domain_max: float = DEFAULT_OUT_OF_DOMAIN_MAX,
 ) -> str:
-    """신뢰도 등급 (specs/07 §5)."""
-    if "POOR" in model_grades or valid_points < min_points or out_of_domain_ratio > 0.30:
+    """신뢰도 등급 (specs/07 §5). 도메인 밖 허용 비율은 설정값이다."""
+    if (
+        "POOR" in model_grades
+        or valid_points < min_points
+        or out_of_domain_ratio > out_of_domain_max
+    ):
         return CONFIDENCE_LOW
     if "FAIR" in model_grades:
         return CONFIDENCE_MEDIUM
@@ -304,6 +315,7 @@ def compute(
         valid_points=len(work),
         min_points=config["min_valid_points"],
         out_of_domain_ratio=out_of_domain_ratio,
+        out_of_domain_max=float(config.get("out_of_domain_ratio_max", DEFAULT_OUT_OF_DOMAIN_MAX)),
     )
 
     daily["grade"] = daily["fi_value"].map(

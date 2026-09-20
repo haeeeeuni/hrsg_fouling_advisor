@@ -15,7 +15,6 @@ from analysis.models import (
     AnalysisRun,
     ComparisonReport,
     FoulingIndexPoint,
-    ModelVersion,
     RunStatus,
 )
 from analysis.pipeline import build_config, recalculate_benefit_for_run
@@ -205,6 +204,78 @@ class AnalysisRunViewSet(viewsets.ReadOnlyModelViewSet):
         result = recalculate_benefit_for_run(run, overrides)
         return Response(BenefitResultSerializer(result).data)
 
+    @action(detail=False, methods=["get"], url_path="export-history")
+    def export_history(self, request: Request):
+        """분석 실행 이력 엑셀 내보내기 (specs/13 §6)."""
+        import io
+        from urllib.parse import quote
+
+        from django.http import FileResponse
+        from django.utils import timezone
+        from openpyxl import Workbook
+
+        from reports import formatting as fmt
+
+        rows = self.filter_queryset(self.get_queryset())[:5000]
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "분석이력"
+        header = [
+            "실행 일시",
+            "호기",
+            "실행자",
+            "데이터 시작",
+            "데이터 종료",
+            "FI",
+            "등급",
+            "신뢰도",
+            "D-day",
+            "순편익(원)",
+            "소요시간(초)",
+            "상태",
+            "자동",
+        ]
+        sheet.append(header)
+        for run in rows:
+            sheet.append(
+                [
+                    fmt.ymd_hm(run.executed_at),
+                    run.unit.code,
+                    run.executed_by.full_name if run.executed_by else "",
+                    fmt.ymd(run.period_start),
+                    fmt.ymd(run.period_end),
+                    run.result_fi,
+                    fmt.grade(run.result_grade),
+                    fmt.confidence(run.result_confidence),
+                    run.result_dday,
+                    run.result_net_benefit,
+                    run.duration_sec,
+                    run.status,
+                    "예" if run.is_auto else "아니오",
+                ]
+            )
+        for index in range(1, len(header) + 1):
+            letter = sheet.cell(row=1, column=index).column_letter
+            width = max(
+                (len(str(c.value)) for c in sheet[letter] if c.value is not None), default=8
+            )
+            sheet.column_dimensions[letter].width = min(max(width + 3, 10), 40)
+        sheet.freeze_panes = "A2"
+
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+
+        name = f"분석실행이력_{timezone.localtime():%Y%m%d%H%M}.xlsx"
+        response = FileResponse(
+            buffer,
+            content_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        )
+        response["Content-Disposition"] = (
+            f"attachment; filename=\"history.xlsx\"; filename*=UTF-8''{quote(name)}"
+        )
+        return response
+
     @action(detail=True, methods=["get"])
     def residuals(self, request: Request, pk: str | None = None) -> Response:
         """차압·스택온도 실측/기대/잔차 시계열 (일 단위 집계)."""
@@ -224,22 +295,6 @@ class AnalysisRunViewSet(viewsets.ReadOnlyModelViewSet):
                 for row in qs
             ]
         )
-
-
-class ModelVersionViewSet(viewsets.ReadOnlyModelViewSet):
-    """GET /api/model-versions/ (관리자) — specs/15 §11."""
-
-    queryset = ModelVersion.objects.select_related("unit")
-    serializer_class = ModelVersionSerializer
-    permission_classes = [IsAdminRole]
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        if unit_id := self.request.query_params.get("unit_id"):
-            qs = qs.filter(unit_id=unit_id)
-        if target := self.request.query_params.get("target"):
-            qs = qs.filter(target=target)
-        return qs
 
 
 class ComparisonViewSet(viewsets.ReadOnlyModelViewSet):

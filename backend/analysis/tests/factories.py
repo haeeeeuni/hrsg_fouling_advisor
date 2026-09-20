@@ -92,6 +92,10 @@ DEFAULT_CONFIG: dict = {
     "evaluation_horizon_days": 365,
     "discount_rate_annual": 0.0,
     "planned_outage_days_ahead": 180,
+    "sensitivity_delta_pct": 30,
+    "trend_confidence_weights": {"HIGH": 1.0, "MEDIUM": 0.7, "LOW": 0.4},
+    "season_boundaries": None,
+    "out_of_domain_ratio_max": 0.30,
     "rated_st_power_mw": 80.0,
 }
 

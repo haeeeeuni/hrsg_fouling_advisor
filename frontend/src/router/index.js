@@ -54,7 +54,7 @@ const routes = [
     component: () => import('@/views/admin/AdminLayout.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
-      { path: '', redirect: { name: 'admin-units' } },
+      { path: '', redirect: { name: 'admin-users' } },
       {
         path: 'units',
         name: 'admin-units',
@@ -66,6 +66,54 @@ const routes = [
         name: 'admin-column-mapping',
         component: () => import('@/views/admin/ColumnMappingView.vue'),
         meta: { requiresAuth: true, requiresAdmin: true, title: '컬럼 매핑' },
+      },
+      {
+        path: 'users',
+        name: 'admin-users',
+        component: () => import('@/views/admin/UsersView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '사용자 관리' },
+      },
+      {
+        path: 'settings',
+        name: 'admin-settings',
+        component: () => import('@/views/admin/SettingsView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '분석 설정' },
+      },
+      {
+        path: 'benefit-settings',
+        name: 'admin-benefit-settings',
+        component: () => import('@/views/admin/BenefitSettingsView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '편익 기본값' },
+      },
+      {
+        path: 'models',
+        name: 'admin-models',
+        component: () => import('@/views/admin/ModelsView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '모델 관리' },
+      },
+      {
+        path: 'run-history',
+        name: 'admin-run-history',
+        component: () => import('@/views/admin/RunHistoryView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '분석 실행 이력' },
+      },
+      {
+        path: 'audit-logs',
+        name: 'admin-audit-logs',
+        component: () => import('@/views/admin/AuditLogView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '감사 로그' },
+      },
+      {
+        path: 'unit-comparison',
+        name: 'admin-unit-comparison',
+        component: () => import('@/views/admin/UnitComparisonView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '호기 간 비교' },
+      },
+      {
+        path: 'backtest',
+        name: 'admin-backtest',
+        component: () => import('@/views/admin/BacktestView.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true, title: '예측 정확도 검증' },
       },
       {
         path: 'keywords',

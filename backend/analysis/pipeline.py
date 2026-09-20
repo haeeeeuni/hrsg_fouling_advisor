@@ -71,6 +71,7 @@ BENEFIT_KEYS: tuple[str, ...] = (
     "evaluation_horizon_days",
     "discount_rate_annual",
     "planned_outage_days_ahead",
+    "sensitivity_delta_pct",
 )
 
 
@@ -87,14 +88,22 @@ class PipelineContext:
     unit: Unit
     config: dict[str, Any]
     progress: Any = None  # callable(percent, stage)
+    # 백테스트 전용. 이 시각 이후의 데이터·세정 이력은 **어떤 경로로도** 쓰지 않는다
+    # (specs/19 §2.6 미래 정보 누설 금지, AC-19-4).
+    cutoff: Any = None
 
     def report(self, percent: int, stage: str) -> None:
         if self.progress:
             self.progress(percent, stage)
 
 
-def load_measurements(unit: Unit, start, end) -> pd.DataFrame:
-    """(unit, timestamp) 인덱스를 타도록 필터 순서를 유지한다 (specs/18 §1)."""
+def load_measurements(unit: Unit, start, end, cutoff=None) -> pd.DataFrame:
+    """(unit, timestamp) 인덱스를 타도록 필터 순서를 유지한다 (specs/18 §1).
+
+    cutoff 가 주어지면 그 시각 이후 데이터는 아예 읽지 않는다(백테스트 누설 차단).
+    """
+    if cutoff is not None:
+        end = min(end, cutoff)
     rows = (
         Measurement.objects.filter(unit=unit, timestamp__gte=start, timestamp__lte=end)
         .order_by("timestamp")
@@ -111,19 +120,28 @@ def load_measurements(unit: Unit, start, end) -> pd.DataFrame:
     return frame
 
 
-def resolve_baseline(unit: Unit, config: dict[str, Any], frame: pd.DataFrame) -> tuple:
+def resolve_baseline(unit: Unit, config: dict[str, Any], frame: pd.DataFrame, cutoff=None) -> tuple:
     """청정 기준 기간 결정 (specs/06 §2).
 
     우선순위: 관리자 지정 → 세정 이력 기반 → 데이터 최초 N일(+경고)
+
+    cutoff 가 주어지면 그 시각 이후에 끝나는 기준 기간과 그 이후의 세정 이력은
+    '아직 일어나지 않은 일'이므로 후보에서 뺀다(AC-19-4 미래 정보 누설 금지).
     """
     warnings: list[dict[str, Any]] = []
 
-    manual = list(CleanBaselinePeriod.objects.filter(unit=unit, is_active=True))
+    manual_qs = CleanBaselinePeriod.objects.filter(unit=unit, is_active=True)
+    if cutoff is not None:
+        manual_qs = manual_qs.filter(end_at__lte=cutoff)
+    manual = list(manual_qs)
     if manual:
         periods = [(pd.Timestamp(p.start_at), pd.Timestamp(p.end_at)) for p in manual]
         return _naive(periods), BaselineSource.MANUAL, warnings
 
-    last_cleaning = CleaningEvent.objects.filter(unit=unit).order_by("-cleaned_at").first()
+    cleaning_qs = CleaningEvent.objects.filter(unit=unit)
+    if cutoff is not None:
+        cleaning_qs = cleaning_qs.filter(cleaned_at__lte=cutoff)
+    last_cleaning = cleaning_qs.order_by("-cleaned_at").first()
     if last_cleaning is not None:
         end_at = last_cleaning.cleaned_end_at or last_cleaning.cleaned_at
         start = pd.Timestamp(end_at) + pd.Timedelta(days=config["baseline_offset_days"])
@@ -168,7 +186,7 @@ def run_analysis(
 
     # --- 데이터 조회 ---
     ctx.report(5, STAGE_LOAD)
-    frame = load_measurements(unit, run.period_start, run.period_end)
+    frame = load_measurements(unit, run.period_start, run.period_end, ctx.cutoff)
     if frame.empty:
         raise PipelineError(STAGE_LOAD, "INSUFFICIENT_DATA", "선택 기간에 데이터가 없습니다.")
 
@@ -202,7 +220,7 @@ def run_analysis(
 
     # --- 기대값 예측 ---
     ctx.report(60, STAGE_MODEL)
-    periods, source, baseline_warnings = resolve_baseline(unit, config, valid)
+    periods, source, baseline_warnings = resolve_baseline(unit, config, valid, ctx.cutoff)
     warnings.extend(baseline_warnings)
     baseline = slice_baseline(valid, periods)
 
@@ -261,7 +279,7 @@ def run_analysis(
 
     # --- 추세 / D-day ---
     ctx.report(85, STAGE_TREND)
-    last_cleaning = _last_cleaning_naive(unit)
+    last_cleaning = _last_cleaning_naive(unit, ctx.cutoff)
     trend_result = tr.forecast(fi_result.points, config, fi_result.current_fi, last_cleaning)
     warnings.extend(trend_result.warnings)
 
@@ -281,9 +299,13 @@ def run_analysis(
     # --- 저장 ---
     ctx.report(96, "결과 저장")
     with transaction.atomic():
-        cluster_def = _save_cluster_definition(unit, cluster_result, config)
-        version_dp = _save_model_version(unit, models["dp"], ModelTarget.DP)
-        version_st = _save_model_version(unit, models["st"], ModelTarget.STACK_TEMP)
+        # 백테스트는 과거 시점 재현이므로 운영 중인 군집 정의·활성 모델을 바꾸지 않는다.
+        persist = ctx.cutoff is None
+        cluster_def = _save_cluster_definition(unit, cluster_result, config) if persist else None
+        version_dp = _save_model_version(unit, models["dp"], ModelTarget.DP) if persist else None
+        version_st = (
+            _save_model_version(unit, models["st"], ModelTarget.STACK_TEMP) if persist else None
+        )
         _save_fouling_points(run, fi_result.points)
         _save_trend(run, trend_result)
         _save_benefit(run, benefit_result, trend_result)
@@ -434,9 +456,15 @@ def build_config(unit: Unit, overrides: dict[str, Any] | None = None) -> dict[st
     return config
 
 
-def _last_cleaning_naive(unit: Unit) -> pd.Timestamp | None:
-    """추세 절단 기준이 되는 최근 세정 일자 (KST naive)."""
-    event = CleaningEvent.objects.filter(unit=unit).order_by("-cleaned_at").first()
+def _last_cleaning_naive(unit: Unit, cutoff=None) -> pd.Timestamp | None:
+    """추세 절단 기준이 되는 최근 세정 일자 (KST naive).
+
+    cutoff 이후의 세정은 '아직 일어나지 않은 일'이므로 제외한다(AC-19-4).
+    """
+    queryset = CleaningEvent.objects.filter(unit=unit)
+    if cutoff is not None:
+        queryset = queryset.filter(cleaned_at__lte=cutoff)
+    event = queryset.order_by("-cleaned_at").first()
     if event is None:
         return None
     at = event.cleaned_end_at or event.cleaned_at

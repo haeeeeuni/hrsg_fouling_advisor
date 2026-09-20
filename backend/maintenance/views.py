@@ -16,8 +16,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from accounts.permissions import IsAdminRole
-from common import jobs
+from common import audit, jobs
+from common.audit import AuditedModelMixin
 from common.exceptions import Conflict, NotFound, ValidationError
+from common.models import AuditAction
 from ingestion.models import BatchStatus, UploadBatch, UploadKind
 from maintenance import tasks
 from maintenance.models import (
@@ -41,10 +43,11 @@ from units.models import Unit
 ALLOWED_SUFFIXES = {".csv", ".xlsx", ".xls"}
 
 
-class CleaningEventViewSet(viewsets.ModelViewSet):
+class CleaningEventViewSet(AuditedModelMixin, viewsets.ModelViewSet):
     queryset = CleaningEvent.objects.select_related("unit", "created_by")
     serializer_class = CleaningEventSerializer
     ordering_fields = ["cleaned_at", "created_at"]
+    audit_target_type = "CleaningEvent"
 
     def get_permissions(self):
         if self.action in {"list", "retrieve"}:
@@ -221,13 +224,14 @@ class MaintenanceUploadView(viewsets.ViewSet):
         )
 
 
-class FoulingKeywordViewSet(viewsets.ModelViewSet):
+class FoulingKeywordViewSet(AuditedModelMixin, viewsets.ModelViewSet):
     """오염 키워드 사전 (관리자 전용, FR-A-07)."""
 
     queryset = FoulingKeyword.objects.all()
     serializer_class = FoulingKeywordSerializer
     permission_classes = [IsAdminRole]
     search_fields = ["keyword"]
+    audit_target_type = "FoulingKeyword"
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -248,4 +252,11 @@ class FoulingKeywordViewSet(viewsets.ModelViewSet):
             if (keyword, category) not in existing
         ]
         FoulingKeyword.objects.bulk_create(rows)
+        audit.record(
+            request=request,
+            action=AuditAction.RESTORE,
+            target_type="FoulingKeyword",
+            target_label=f"기본 키워드 {len(rows)}건 복원",
+            after={"restored": len(rows)},
+        )
         return Response({"restored": len(rows), "total": FoulingKeyword.objects.count()})

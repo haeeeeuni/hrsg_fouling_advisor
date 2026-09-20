@@ -418,3 +418,116 @@ class ComparisonReport(models.Model):
 
     def __str__(self) -> str:
         return f"{self.unit.code} {self.cleaning_event_id} 비교"
+
+
+class AutoRecalcTrigger(models.TextChoices):
+    ON_UPLOAD = "ON_UPLOAD", "업로드 완료 시"
+    SCHEDULE = "SCHEDULE", "정해진 일정"
+
+
+class AutoRecalcPeriodMode(models.TextChoices):
+    ROLLING = "ROLLING", "최근 N개월 고정 창"
+    EXTEND = "EXTEND", "기준 분석 시작일 ~ 최신"
+
+
+class AutoRecalcConfig(models.Model):
+    """자동 재계산 설정 (specs/19 §1.2, FR-U-17)."""
+
+    unit = models.OneToOneField(Unit, on_delete=models.CASCADE, related_name="auto_recalc")
+    enabled = models.BooleanField("사용", default=False)
+    trigger = models.CharField(
+        "트리거",
+        max_length=20,
+        choices=AutoRecalcTrigger.choices,
+        default=AutoRecalcTrigger.ON_UPLOAD,
+    )
+    schedule_cron = models.CharField("스케줄(cron)", max_length=100, blank=True)
+    base_analysis_run = models.ForeignKey(
+        AnalysisRun,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="auto_recalc_configs",
+        verbose_name="기준 분석",
+    )
+    period_mode = models.CharField(
+        "기간 산정",
+        max_length=20,
+        choices=AutoRecalcPeriodMode.choices,
+        default=AutoRecalcPeriodMode.ROLLING,
+    )
+    rolling_months = models.PositiveIntegerField("최근 개월", default=12)
+    # 오염 구간으로 학습하면 기준이 오염되므로 기본 비활성 (specs/19 §1.5)
+    retrain_model = models.BooleanField("모델 자동 재학습", default=False)
+    notify_on_grade_change = models.BooleanField("등급 변화 알림", default=True)
+
+    updated_by = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "자동 재계산 설정"
+        verbose_name_plural = "자동 재계산 설정"
+
+    def __str__(self) -> str:
+        return f"{self.unit.code} 자동재계산 {'ON' if self.enabled else 'OFF'}"
+
+
+class NotificationLevel(models.TextChoices):
+    INFO = "INFO", "정보"
+    WARNING = "WARNING", "경고"
+
+
+class Notification(models.Model):
+    """앱 내 알림 (specs/19 §1.4). 등급 상승 시 생성된다."""
+
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name="notifications")
+    analysis_run = models.ForeignKey(
+        AnalysisRun, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications"
+    )
+    level = models.CharField(
+        "수준", max_length=20, choices=NotificationLevel.choices, default=NotificationLevel.INFO
+    )
+    title = models.CharField("제목", max_length=200)
+    message = models.TextField("내용", blank=True)
+    payload = models.JSONField("상세", default=dict)
+    is_read = models.BooleanField("읽음", default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "알림"
+        verbose_name_plural = "알림"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["-created_at"]), models.Index(fields=["is_read"])]
+
+    def __str__(self) -> str:
+        return f"{self.unit.code} {self.title}"
+
+
+class BacktestResult(models.Model):
+    """백테스트 결과 (specs/19 §2.5).
+
+    **미래 정보 누설 금지**가 가장 중요하다. 컷오프 이후의 데이터·세정 이력·모델을
+    어떤 경로로도 사용하지 않는다(AC-19-4).
+    """
+
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE, related_name="backtests")
+    created_by = models.ForeignKey(
+        django_settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    lookahead_days = models.PositiveIntegerField("컷오프 선행 일수", default=60)
+    cases = models.JSONField("세정별 결과", default=list)
+    summary = models.JSONField("집계", default=dict)
+    coefficient_suggestion = models.JSONField("계수 보정 제안", default=dict)
+    warnings = models.JSONField("경고", default=list)
+
+    class Meta:
+        verbose_name = "백테스트 결과"
+        verbose_name_plural = "백테스트 결과"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.unit.code} 백테스트 (lookahead={self.lookahead_days})"

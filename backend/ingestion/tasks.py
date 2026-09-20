@@ -166,11 +166,13 @@ def commit_upload(self, batch_id: int, duplicate_policy: str = DuplicatePolicy.S
 
         logger.info("upload committed batch_id=%s rows=%s", batch_id, loaded)
         report_progress(self, 100, "완료")
+        auto_job_id = _trigger_auto_recalc(unit.id) if loaded else None
         return {
             "batch_id": batch.id,
             "row_loaded": loaded,
             "row_skipped": validator.row_dropped,
             "row_duplicated": validator.duplicate_count,
+            "auto_recalc_job_id": auto_job_id,
         }
 
     except Exception as exc:  # noqa: BLE001
@@ -228,3 +230,26 @@ def _bulk_insert(unit, batch: UploadBatch, frame: pd.DataFrame, duplicate_policy
         objects, batch_size=BULK_BATCH_SIZE, ignore_conflicts=True
     )
     return sum(1 for obj in created if obj.pk is not None)
+
+
+def _trigger_auto_recalc(unit_id: int) -> str | None:
+    """적재 완료 훅 — ON_UPLOAD 설정 호기만 자동 재계산을 건다 (specs/19 §1.2).
+
+    자동 재계산 실패가 적재 결과를 되돌리면 안 되므로 예외를 삼키고 로그만 남긴다.
+    """
+    # 순환 import 방지 — ingestion 은 analysis 를 모듈 수준에서 알지 못한다.
+    from analysis.models import AutoRecalcConfig, AutoRecalcTrigger
+    from analysis.tasks_auto import auto_recalc
+    from common import jobs
+
+    enabled = AutoRecalcConfig.objects.filter(
+        unit_id=unit_id, enabled=True, trigger=AutoRecalcTrigger.ON_UPLOAD
+    ).exists()
+    if not enabled:
+        return None
+
+    try:
+        return jobs.enqueue(auto_recalc, unit_id=unit_id, trigger=AutoRecalcTrigger.ON_UPLOAD)
+    except Exception:  # noqa: BLE001
+        logger.exception("auto recalc enqueue failed unit_id=%s", unit_id)
+        return None

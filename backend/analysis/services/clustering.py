@@ -45,31 +45,50 @@ def assign_load_band(load_ratio_pct: pd.Series, edges: list[float]) -> pd.Series
     return pd.cut(load_ratio_pct, bins=bounds, labels=labels, right=False).astype(object)
 
 
+# 계절 정의 기본값. 실제 값은 설정(season_boundaries)에서 읽는다 — 여기는 폴백이다.
+DEFAULT_SEASON_BOUNDARIES: dict = {
+    "months": {"SP": [3, 5], "SU": [6, 8], "FA": [9, 11], "WI": [12, 2]},
+    "temp": {"cold_max": 10, "warm_min": 20},
+}
+
+
 def assign_season(
-    timestamps: pd.Series, ambient_temp_c: pd.Series | None, definition: str
+    timestamps: pd.Series,
+    ambient_temp_c: pd.Series | None,
+    definition: str,
+    boundaries: dict | None = None,
 ) -> pd.Series:
     """계절 판정 (specs/05 §2.1).
 
-    TEMP 모드에서 10~20 ℃ 구간은 봄·가을이 겹치므로 월 정보를 병용해 가른다.
+    경계값은 DB 설정(season_boundaries)이며 호기별 오버라이드가 가능하다.
+    TEMP 모드에서 두 경계 사이 구간은 봄·가을이 겹치므로 월 정보를 병용해 가른다.
     """
+    bounds = boundaries or DEFAULT_SEASON_BOUNDARIES
+    months = bounds.get("months", DEFAULT_SEASON_BOUNDARIES["months"])
+    temp = bounds.get("temp", DEFAULT_SEASON_BOUNDARIES["temp"])
     month = pd.DatetimeIndex(timestamps).month
 
     if definition == "TEMP" and ambient_temp_c is not None:
+        cold_max = float(temp.get("cold_max", 10))
+        warm_min = float(temp.get("warm_min", 20))
+        # 봄·가을을 가르는 기준 월 = 가을 시작월
+        autumn_start = int(months.get("FA", [9, 11])[0])
+
         season = pd.Series("SP", index=timestamps.index, dtype=object)
-        season[ambient_temp_c > 20] = "SU"
-        season[ambient_temp_c < 10] = "WI"
-        mid = (ambient_temp_c >= 10) & (ambient_temp_c <= 20)
-        season[mid & (month >= 7)] = "FA"
-        season[mid & (month < 7)] = "SP"
+        season[ambient_temp_c > warm_min] = "SU"
+        season[ambient_temp_c < cold_max] = "WI"
+        mid = (ambient_temp_c >= cold_max) & (ambient_temp_c <= warm_min)
+        season[mid & (month >= autumn_start)] = "FA"
+        season[mid & (month < autumn_start)] = "SP"
         return season
 
-    conditions = [
-        (month >= 3) & (month <= 5),
-        (month >= 6) & (month <= 8),
-        (month >= 9) & (month <= 11),
-    ]
+    conditions, labels = [], []
+    for code in ("SP", "SU", "FA"):
+        start, end = months.get(code, DEFAULT_SEASON_BOUNDARIES["months"][code])
+        conditions.append((month >= start) & (month <= end))
+        labels.append(code)
     return pd.Series(
-        np.select(conditions, ["SP", "SU", "FA"], default="WI"),
+        np.select(conditions, labels, default="WI"),
         index=timestamps.index,
         dtype=object,
     )
@@ -185,7 +204,10 @@ def cluster(
             out["cluster_key"] = _assign_kmeans(out, kmeans_params)
             out["load_band"] = assign_load_band(out["load_ratio_pct"], config["load_band_edges"])
             out["season"] = assign_season(
-                out["timestamp"], out.get("ambient_temp_c"), config["season_definition"]
+                out["timestamp"],
+                out.get("ambient_temp_c"),
+                config["season_definition"],
+                config.get("season_boundaries"),
             )
             active_params = kmeans_params
         except (ValueError, ImportError) as exc:
@@ -205,7 +227,10 @@ def cluster(
     if method == METHOD_RULE:
         out["load_band"] = assign_load_band(out["load_ratio_pct"], config["load_band_edges"])
         out["season"] = assign_season(
-            out["timestamp"], out.get("ambient_temp_c"), config["season_definition"]
+            out["timestamp"],
+            out.get("ambient_temp_c"),
+            config["season_definition"],
+            config.get("season_boundaries"),
         )
         out["cluster_key"] = out["load_band"].astype(str) + "-" + out["season"].astype(str)
         out.loc[out["load_band"].isna(), "cluster_key"] = None
@@ -213,6 +238,7 @@ def cluster(
             "method": METHOD_RULE,
             "load_band_edges": config["load_band_edges"],
             "season_definition": config["season_definition"],
+            "season_boundaries": config.get("season_boundaries"),
         }
 
     # 희소 군집 판정 (specs/05 §3)

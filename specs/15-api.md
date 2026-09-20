@@ -251,10 +251,23 @@ POST  /api/jobs/{job_id}/cancel/  → 202
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/units/{id}/auto-recalc/` | 자동 재계산 설정 on/off 및 조건 |
-| POST | `/backtests/` | 백테스트 실행 → 202 job |
-| GET | `/backtests/` | 결과 목록 |
+| GET | `/units/{id}/auto-recalc/` | 자동 재계산 설정 조회 (일반 사용자 읽기 가능) |
+| PUT | `/units/{id}/auto-recalc/` | 자동 재계산 설정 변경 (관리자) |
+| POST | `/backtests/` | 백테스트 실행 → 202 job (관리자) |
+| GET | `/backtests/` | 결과 목록 (`?unit_id=`) |
+| GET | `/backtests/{id}/` | 결과 상세 |
+| GET | `/backtests/availability/` | 호기별 실행 가능 여부 — 세정 2회 미만이면 `available=false` (AC-19-6) |
 | GET | `/units/comparison/` | 호기 간 오염도 비교 및 세정 우선순위 (`?unit_ids=1,2,3`) |
+| GET | `/notifications/` | 알림 목록 (`?unread=true`, `?unit_id=`). 응답에 `unread_count` 포함 |
+| POST | `/notifications/{id}/read/` | 개별 읽음 처리 |
+| POST | `/notifications/read-all/` | 전체 읽음 처리 |
+
+**정정(구현 시점):** 원안은 자동 재계산 설정을 `POST` 하나로 뒀으나, 설정은 호기당 1건인 멱등 리소스이므로
+조회 `GET` + 갱신 `PUT` 으로 나눈다. 백테스트 메뉴 비활성화 판단(AC-19-6)과 알림 읽음 처리(specs/19 §1.4)에
+필요한 엔드포인트가 원안에 빠져 있어 함께 추가했다.
+
+**라우팅 주의:** `/units/comparison/` 은 `units` 라우터의 상세 경로 `/units/{pk}/` 와 형태가 겹친다.
+`config/urls.py` 에서 `analysis.urls` 를 `units.urls` 보다 먼저 include 해 고정 경로가 먼저 잡히게 한다.
 
 ---
 

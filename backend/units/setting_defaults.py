@@ -359,6 +359,20 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         "계절 판정 기준",
         description="MONTH 또는 TEMP",
     ),
+    SettingDef(
+        "season_boundaries",
+        {
+            "months": {"SP": [3, 5], "SU": [6, 8], "FA": [9, 11], "WI": [12, 2]},
+            "temp": {"cold_max": 10, "warm_min": 20},
+        },
+        TYPE_JSON,
+        CAT_CLUSTER,
+        "계절 정의",
+        description=(
+            "months 는 계절별 [시작월, 종료월], temp 는 TEMP 모드의 온도 경계다. "
+            "10~20 ℃ 구간은 봄·가을이 겹쳐 월 정보를 병용한다(specs/05 §2.1)."
+        ),
+    ),
     SettingDef("kmeans_k", 6, TYPE_INT, CAT_CLUSTER, "KMeans 군집 수", min_value=2, max_value=20),
     SettingDef(
         "min_cluster_points",
@@ -644,7 +658,25 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         min_value=0,
         max_value=1,
     ),
-    # --- Phase 5: 정비 이력 키워드 추출 (specs/10 §3.2) ---
+    SettingDef(
+        "trend_confidence_weights",
+        {"HIGH": 1.0, "MEDIUM": 0.7, "LOW": 0.4},
+        TYPE_JSON,
+        CAT_FOULING,
+        "추세 회귀 신뢰도 가중치",
+        description="FI 일자별 신뢰도에 곱하는 회귀 가중치(specs/08 §4).",
+    ),
+    SettingDef(
+        "sensitivity_delta_pct",
+        30,
+        TYPE_FLOAT,
+        CAT_BENEFIT,
+        "민감도 변동폭",
+        description="주요 파라미터를 ±이 비율만큼 흔들어 순편익 변화를 본다(specs/09 §5).",
+        unit_label="%",
+        min_value=1,
+        max_value=100,
+    ),  # --- Phase 5: 정비 이력 키워드 추출 (specs/10 §3.2) ---
     SettingDef(
         "extraction_threshold",
         1.0,
@@ -654,6 +686,48 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         description="매칭 점수가 이 값 이상이면 오염 관련 후보로 제시한다.",
         min_value=0,
         max_value=100,
+    ),
+    # --- Phase 7: 옵션 기능 (specs/19) ---
+    SettingDef(
+        "priority_weights",
+        {"fi": 0.30, "slope": 0.20, "daily_loss": 0.35, "urgency": 0.15},
+        TYPE_JSON,
+        CAT_SYSTEM,
+        "세정 우선순위 가중치",
+        description=(
+            "호기 간 비교 점수의 가중합(specs/19 §3.3). "
+            "fi·slope·daily_loss·urgency 합이 1이 되도록 둔다."
+        ),
+    ),
+    SettingDef(
+        "backtest_lookahead_days",
+        [30, 60, 90],
+        TYPE_JSON,
+        CAT_SYSTEM,
+        "백테스트 컷오프 지점",
+        description="세정 실제 일자에서 이 일수만큼 앞선 시점을 컷오프로 삼는다(specs/19 §2.2).",
+    ),
+    SettingDef(
+        "backtest_hit_window_days",
+        30,
+        TYPE_INT,
+        CAT_SYSTEM,
+        "백테스트 적중 판정 폭",
+        description="예측 오차가 ±이 일수 이내면 적중으로 센다.",
+        unit_label="일",
+        min_value=1,
+        max_value=365,
+    ),
+    SettingDef(
+        "auto_recalc_rolling_months",
+        12,
+        TYPE_INT,
+        CAT_SYSTEM,
+        "자동 재계산 기본 창",
+        description="ROLLING 모드에서 사용할 최근 개월 수.",
+        unit_label="개월",
+        min_value=1,
+        max_value=120,
     ),
     # --- Phase 3: FOULING — specs/07, specs/13 §4.2 ---
     SettingDef(
@@ -741,6 +815,16 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         unit_label="℃",
         min_value=1,
         max_value=100,
+    ),
+    SettingDef(
+        "out_of_domain_ratio_max",
+        0.30,
+        TYPE_FLOAT,
+        CAT_FOULING,
+        "도메인 밖 허용 비율",
+        description="이 비율을 넘으면 신뢰도를 '낮음' 으로 낮춘다(specs/07 §5).",
+        min_value=0,
+        max_value=1,
     ),
     SettingDef(
         "smoothing_window_h",
