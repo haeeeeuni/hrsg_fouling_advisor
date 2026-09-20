@@ -42,7 +42,13 @@
 ### 3.3 파생 피처
 - `flow_squared` = 유량² (차압은 유량 제곱에 비례 — 물리적 근거)
 - `load_ratio` = `gt_power_mw / rated_power_mw`
-- `delta_t` = `gt_exhaust_temp_c - stack_temp_c` (MODEL_DP 전용 참고 피처, MODEL_ST에는 타깃 누설이므로 **사용 금지**)
+- `delta_t` = `gt_exhaust_temp_c - stack_temp_c` — **기본 비활성**(설정 `use_delta_t_for_dp`, 기본 `False`). MODEL_ST에는 타깃 누설이므로 **사용 금지**.
+
+> **정정 근거(2026-09-20, Phase 3):** 원문은 `delta_t` 를 "MODEL_DP 전용 참고 피처"로 허용했으나,
+> `stack_temp_c` 자체가 오염에 반응해 상승하는 **오염 지표**다. 이를 기대 차압의 피처로 쓰면
+> 오염이 진행될수록 `expected_dp` 가 함께 따라 올라가 **잔차가 상쇄되고 FI가 과소평가**된다
+> (직접 누설은 아니지만 대리 변수를 통한 누설이다). 목표 G1("세정 이벤트에서 FI가 뚜렷이 회복")을
+> 훼손할 수 있어 기본값을 끔으로 두고, 관리자가 필요 시 켤 수 있도록 설정값으로 노출했다.
 
 > **타깃 누설 금지 규칙:** `MODEL_ST`의 피처에 `stack_temp_c`에서 파생된 값을 넣지 않는다. `MODEL_DP`의 피처에 `hrsg_gas_dp_kpa`/`gt_backpressure_kpa` 파생값을 넣지 않는다.
 

@@ -123,7 +123,10 @@
 
 ## 5. 생성 및 다운로드
 
-- 엔드포인트: `POST /api/analysis-runs/{id}/report/?format=pdf|xlsx`
+- 엔드포인트: `POST /api/analysis-runs/{id}/export/` — body: `format`(`pdf`|`xlsx`), `charts`(base64 PNG 배열, 선택)
+  - 비교 리포트는 `POST /api/comparisons/{id}/export/`, 다운로드는 `GET /api/reports/{id}/download/`
+  > **정정 근거(2026-09-20):** 기존 `POST /api/analysis-runs/{id}/report/?format=` 는 API 정본인 `15-api.md` §9의 `/export/`와 불일치했다.
+  > 엔드포인트 정의는 `15-api.md`를 정본으로 두고 이 문서를 맞췄다(형식은 쿼리스트링이 아닌 body 필드).
 - 생성은 비동기로 처리하고 완료 시 다운로드 URL을 제공한다(소규모는 동기 응답 허용).
 - 파일명 규칙: `HRSG오염도리포트_{호기코드}_{분석시작}_{분석종료}_{생성일시}.pdf`
   - 한글 파일명은 `Content-Disposition`에 RFC 5987 인코딩(`filename*=UTF-8''...`)으로 전달한다.

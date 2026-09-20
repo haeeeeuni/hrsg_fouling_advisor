@@ -28,8 +28,9 @@
 | 리포트 | openpyxl(엑셀), ReportLab 또는 WeasyPrint(PDF) |
 | DB | PostgreSQL |
 
-- **금지:** TypeScript 전환, Options API 혼용, jQuery, Bootstrap 이외의 UI 프레임워크, Django Template 기반 화면(관리자 `/admin/` 제외), SQLite를 운영 DB로 사용.
-- **허용:** 테스트/로컬 개발 편의를 위한 SQLite는 금지. 로컬도 PostgreSQL(Docker) 사용.
+- **금지:** TypeScript 전환, Options API 혼용, jQuery, Bootstrap 이외의 UI 프레임워크, Django Template 기반 화면(관리자 `/admin/` 제외), **SQLite 사용(운영·로컬·테스트 전부)**.
+- 로컬 개발과 테스트도 PostgreSQL(Docker)을 사용한다.
+- 차트 라이브러리는 **Chart.js + vue-chartjs** 1종으로 고정한다(`specs/16-frontend.md` §1).
 
 ---
 
@@ -110,7 +111,7 @@ frontend/src/
 ## 6. API 규칙
 
 - 베이스 경로 `/api/`, 버전 없는 단일 버전으로 시작.
-- 인증: 세션 또는 JWT 중 하나로 통일(`specs/15-api.md` 결정 사항 준수). 모든 엔드포인트는 인증 필수(로그인 제외).
+- 인증: **세션 쿠키(HttpOnly, SameSite=Lax) + CSRF 토큰**으로 확정한다(`specs/15-api.md` §1, `specs/01-auth-and-users.md` §3.3). JWT는 사용하지 않는다. 모든 엔드포인트는 인증 필수(로그인·CSRF 발급 제외).
 - 성공 응답은 리소스 JSON을 그대로, 목록은 DRF 페이지네이션 래퍼(`count`, `next`, `previous`, `results`).
 - 에러 응답 포맷 고정:
   ```json

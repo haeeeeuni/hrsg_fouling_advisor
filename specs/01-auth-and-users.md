@@ -13,8 +13,7 @@ Django `AbstractUser`를 상속해 확장한다.
 
 ```
 User(AbstractUser)
-  - username      : 사번을 저장 (로그인 식별자, unique)
-  - employee_no   : 사번 (username과 동일 값을 유지하는 명시 필드, unique, 최대 20자)
+  - employee_no   : 사번 (로그인 식별자, USERNAME_FIELD, unique, 최대 20자)
   - full_name     : 성명 (최대 50자, 필수)
   - role          : 'USER' | 'ADMIN'  (기본 'USER')
   - department    : 부서 (선택, 최대 50자)
@@ -26,8 +25,11 @@ User(AbstractUser)
 ```
 
 - `AbstractUser`의 `first_name`, `last_name`, `email`은 사용하지 않는다(`email`은 선택 입력 허용).
-- `USERNAME_FIELD = 'employee_no'` 로 설정하고 `username` 필드는 제거하거나 `employee_no`와 동기화한다.
-  → 구현 결정: **`username` 필드를 제거하고 `employee_no`를 `USERNAME_FIELD`로 사용한다.**
+- **`username` 필드를 제거하고 `employee_no`를 `USERNAME_FIELD`로 사용한다.**
+  (`AbstractUser`를 상속하되 `username = None`으로 두고 `employee_no`를 별도 정의, `REQUIRED_FIELDS = ['full_name']`)
+  > **정정 근거(2026-09-20):** 기존 문서는 모델 정의에 `username`(사번 저장)을 두면서 바로 아래에서 "`username` 필드를 제거한다"는
+  > 구현 결정을 내려 자기모순이었다. 구현 결정문을 정본으로 채택하고 모델 정의에서 `username`을 삭제했다.
+  > 이 결정은 **첫 마이그레이션 이전에 확정**되어야 한다(`14-data-model.md` §7).
 - 관리자 여부는 `role == 'ADMIN'` 으로 판단한다. Django 기본 `is_staff`/`is_superuser`는 Django Admin 접근용으로만 사용하며, 앱 권한 판정에 쓰지 않는다.
 
 ## 3. 로그인

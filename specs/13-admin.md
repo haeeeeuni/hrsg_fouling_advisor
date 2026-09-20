@@ -125,6 +125,12 @@ UnitSetting            # 호기별 오버라이드
 | `trend_window_days` | 180 |
 | `min_trend_points` | 30 |
 | `max_forecast_days` | 730 |
+| `login_max_failures` | 5 |
+| `login_lockout_minutes` | 5 |
+
+> **추가 근거(2026-09-20, Phase 1):** `01-auth-and-users.md` §3.2의 로그인 잠금 규칙("실패 5회 연속 시 5분 차단")은
+> 튜닝 가능한 임계값이므로 코드에 고정하지 않고 설정값으로 옮겼다(AGENTS.md §1.2).
+> `session_timeout_hours` 변경은 서버 재기동 후 적용된다(Django `SESSION_COOKIE_AGE` 는 기동 시 읽힌다).
 
 ### 4.3 설정 화면 동작
 - 카테고리별 탭, 항목별 라벨·설명·단위·기본값·현재값 표시
