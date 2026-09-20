@@ -1,0 +1,27 @@
+/* Bootstrap 5 유틸리티를 우선 쓰고, 부득이한 전역 규칙만 여기에 둔다 (AGENTS.md §4). */
+
+:root {
+  --app-sidebar-width: 220px;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  /* 사내 표준 브라우저(Chrome/Edge) 기준 한글 폰트 스택 */
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', 'Apple SD Gothic Neo',
+    system-ui, sans-serif;
+}
+
+.app-sidebar {
+  width: var(--app-sidebar-width);
+  min-height: 100%;
+}
+
+/* 최소 지원 폭 1280px (specs/11 §9) */
+.app-main {
+  min-width: 0;
+}

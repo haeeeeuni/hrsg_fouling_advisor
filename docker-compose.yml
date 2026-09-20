@@ -1,0 +1,36 @@
+# 로컬 개발용 인프라. AGENTS.md §2 — SQLite는 운영·로컬·테스트 전부 금지.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hrsg_db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hrsg}
+      POSTGRES_USER: ${DB_USER:-hrsg}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hrsg}
+      # 한글 정렬·비교를 위한 초기화 옵션
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # pytest-django가 test_<DB_NAME> 을 생성하므로 사용자에게 CREATEDB 권한이 필요하다(기본 superuser).
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hrsg} -d ${DB_NAME:-hrsg}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # specs/18 §7 — 비동기 작업(검증·적재·분석·재학습·리포트)용 Celery 브로커 겸 결과 백엔드
+  redis:
+    image: redis:7-alpine
+    container_name: hrsg_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

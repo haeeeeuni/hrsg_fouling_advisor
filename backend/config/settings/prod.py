@@ -1,0 +1,20 @@
+"""운영 설정. specs/18 §2 — DEBUG=False, ALLOWED_HOSTS 명시, 보안 헤더."""
+
+from .base import *  # noqa: F403
+
+DEBUG = False
+
+# 운영은 동일 오리진(Nginx가 SPA와 /api/를 함께 서빙)이므로 CORS를 열지 않는다.
+CORS_ALLOWED_ORIGINS: list[str] = []
+CORS_ALLOW_CREDENTIALS = False
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+X_FRAME_OPTIONS = "DENY"

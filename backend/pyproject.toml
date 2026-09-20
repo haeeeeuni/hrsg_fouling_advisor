@@ -1,0 +1,25 @@
+# AGENTS.md §4 — black(line-length 100), isort, ruff
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+extend-exclude = "/migrations/"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_glob = ["*/migrations/*"]
+known_first_party = ["accounts", "analysis", "common", "config", "ingestion", "maintenance", "reports", "units"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.coverage.run]
+source = ["analysis/services"]
+omit = ["*/tests/*", "*/migrations/*"]

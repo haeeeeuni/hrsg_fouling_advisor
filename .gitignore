@@ -1,3 +1,28 @@
 .DS_Store
+
+# 작업 메모 / 대용량 샘플 데이터
 *.txt
-*.txt
+!backend/requirements.txt
+!backend/reports/fonts/OFL.txt
+*.csv
+
+# Python
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 환경 변수·비밀정보 (AGENTS.md §7)
+.env
+.env.*
+!.env.example
+
+# 런타임 산출물 (업로드 원본, 리포트, 모델 아티팩트)
+backend/var/
+backend/staticfiles/
+
+# Node
+frontend/node_modules/
+frontend/dist/
