@@ -56,11 +56,22 @@ SERVE_SPA = True
 
 # 리다이렉트를 켜면 플랫폼 헬스체크·내부 요청이 301 로 튕긴다.
 SECURE_SSL_REDIRECT = False
-# Render 는 *.onrender.com 로 서비스한다. 배포 시 실제 호스트를 넣는다.
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h]
+
 if hostname := os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
     ALLOWED_HOSTS.append(hostname)
     CSRF_TRUSTED_ORIGINS = [f"https://{hostname}"]
+
+if os.environ.get("RENDER"):
+    # 플랫폼 헬스체크가 외부 호스트명이 아닌 Host 헤더로 들어오는 경우가 있다.
+    # 걸리면 400 이 나가 배포가 계속 실패하는데, 원인이 드러나지 않아 찾기 어렵다.
+    # 선행 점(.)은 Django 가 허용하는 서브도메인 와일드카드다.
+    ALLOWED_HOSTS.append(".onrender.com")
+    # 컨테이너 내부에서 스스로를 부르는 경우(헬스체크·워밍업) 대비.
+    ALLOWED_HOSTS.extend(["localhost", "127.0.0.1"])
+
+# 순서를 유지하며 중복을 제거한다.
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
 
 # --- 관리형 DB ---------------------------------------------------------------
 
