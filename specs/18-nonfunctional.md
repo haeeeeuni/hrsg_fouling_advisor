@@ -129,6 +129,36 @@ CELERY_BROKER_URL (사용 시)
 - **`SECRET_KEY` 기동 거부** — 플레이스홀더이거나 50자 미만이면 `prod.py` 가 예외를 던진다.
   §2 가 `.env` 관리를 요구하지만, 빠뜨렸을 때 조용히 취약한 상태로 뜨는 것을 막는다.
 
+### 데모 배포 (2026-09-21, 시연 전용)
+
+위 구성은 사내 운영용이다. 프로젝트 시연을 위해 PaaS(Render) 경로를 **별도로** 추가했다.
+
+> **이 경로는 `PROJECT.md` §1.5(외부 공개 서비스 제외)와 `specs/01` §1(폐쇄형 사내 시스템)에
+> 어긋난다.** 시연 목적에 한정하며 실제 운전 데이터를 올리지 않는다
+> (`scripts/generate_sample_data.py` 산출물만 사용).
+
+| 산출물 | 내용 |
+|--------|------|
+| `render.yaml` | Blueprint — web / Postgres / Key Value |
+| `Dockerfile.render` | 단일 이미지 (SPA 빌드 + Django) |
+| `config/settings/demo.py` | `prod.py` 상속. 차이는 아래 세 가지뿐 |
+| `.dockerignore`(루트) | 저장소 루트를 컨텍스트로 쓰는 빌드용 |
+
+`prod.py` 와의 차이:
+
+1. **WhiteNoise 가 SPA·정적 파일을 서빙한다.** PaaS 는 컨테이너 하나만 띄우므로 Nginx 가 없다.
+   프론트가 `baseURL: '/api'` 상대 경로 + `withCredentials` 를 쓰므로 SPA 와 API 가 같은
+   오리진이어야 세션 쿠키가 동작한다. 정적 사이트를 분리하면 CORS 와 `SameSite=None` 완화가
+   필요해지므로 단일 서비스로 둔다.
+2. **HTTPS 리다이렉트를 끈다.** PaaS 가 앞단에서 이미 처리한다.
+3. **`DEMO_RUN_TASKS_INLINE`** — 무료 플랜에는 백그라운드 워커가 없다. 켜면 업로드·분석이
+   요청 안에서 끝난다. `CELERY_TASK_STORE_EAGER_RESULT` 를 함께 켜야 동기 실행 결과가
+   백엔드에 저장되어 `GET /api/jobs/{id}/` 폴링(`specs/15` §1)이 성립한다.
+
+**WhiteNoise 추가 근거:** `AGENTS.md` §9 는 명세에 없는 라이브러리 추가를 금지한다.
+§7 원안이 PaaS 를 다루지 않아 어떤 방식이든 명세 밖이므로, Django 에서 정적 파일을 서빙하는
+표준 수단인 WhiteNoise 를 **데모 설정에서만** 쓴다. 사내 운영 경로(`prod.py`)는 그대로다.
+
 ## 8. 테스트 기준
 | 대상 | 기준 |
 |------|------|

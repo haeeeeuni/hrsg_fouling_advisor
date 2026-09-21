@@ -1,0 +1,32 @@
+# 저장소 루트를 빌드 컨텍스트로 쓰는 이미지용 (Dockerfile.render).
+# backend/.dockerignore 는 컨텍스트가 backend/ 일 때만 적용되므로 여기에 다시 둔다.
+
+.git/
+.github/
+
+# Python
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.coverage
+**/.coverage.*
+**/htmlcov/
+
+# 런타임 산출물 — 업로드 원본·모델 아티팩트·리포트 (1GB 이상)
+backend/var/
+backend/staticfiles/
+
+# Node
+**/node_modules/
+frontend/dist/
+**/.vite/
+
+# 비밀정보·인증서
+**/.env
+deploy/certs/
+
+# 개발 부산물
+*.csv
+*.md
+!README.md

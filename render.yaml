@@ -1,0 +1,85 @@
+# Render Blueprint — 데모 전용.
+#
+# 사내 운영은 docker-compose.prod.yml 을 쓴다. 이 파일은 프로젝트 시연용이며,
+# PROJECT.md §1.5(외부 공개 서비스 제외)와 specs/01 §1(폐쇄형 사내 시스템)에
+# 어긋나므로 **실제 운전 데이터를 올리지 않는다.** 샘플 데이터만 쓴다.
+#
+# 배포: Render 대시보드 → New → Blueprint → 이 저장소 연결
+
+databases:
+  - name: hrsg-db
+    databaseName: hrsg
+    user: hrsg
+    plan: free          # 무료 인스턴스는 유효 기간이 있다. 만료되면 재생성해야 한다.
+
+services:
+  # --- 작업 상태 저장소 (202 + job_id 폴링에 필요) ---
+  - type: keyvalue
+    name: hrsg-redis
+    plan: free
+    ipAllowList: []     # 내부 서비스만 접근
+    maxmemoryPolicy: noeviction   # 작업 결과가 중간에 사라지면 폴링이 멈춘다
+
+  # --- 웹 (Django + SPA) ---
+  - type: web
+    name: hrsg-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    plan: free
+    healthCheckPath: /api/health/ready/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.demo
+      - key: DJANGO_SECRET_KEY
+        generateValue: true       # Render 가 무작위 생성 (prod.py 가드 통과)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hrsg-db
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: hrsg-redis
+          type: keyvalue
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: hrsg-redis
+          type: keyvalue
+          property: connectionString
+      # 무료 플랜에는 백그라운드 워커가 없다. 업로드·분석을 요청 안에서 끝낸다.
+      # 샘플 데이터(10만 행) 기준 적재 12초·분석 9초.
+      # 유료 워커를 붙이면 False 로 바꾸고 아래 worker 서비스를 활성화한다.
+      - key: DEMO_RUN_TASKS_INLINE
+        value: "True"
+      # 무료 인스턴스는 메모리가 작다. 워커마다 pandas·scikit-learn 을 적재하므로
+      # 기본값(CPU×2+1)으로 두면 기동 중 OOM 으로 죽는다.
+      - key: GUNICORN_WORKERS
+        value: "2"
+
+  # --- Celery 워커 (유료 플랜 필요) ---
+  # 무료 플랜에는 백그라운드 워커가 없어 주석 처리했다.
+  # 쓰려면 아래 주석을 풀고 hrsg-web 의 DEMO_RUN_TASKS_INLINE 을 False 로 바꾼다.
+  #
+  # - type: worker
+  #   name: hrsg-worker
+  #   runtime: docker
+  #   dockerfilePath: ./Dockerfile.render
+  #   dockerCommand: celery -A config worker -l info --concurrency=2
+  #   plan: starter
+  #   envVars:
+  #     - key: DJANGO_SETTINGS_MODULE
+  #       value: config.settings.demo
+  #     - key: DJANGO_SECRET_KEY
+  #       fromService:
+  #         name: hrsg-web
+  #         type: web
+  #         envVarKey: DJANGO_SECRET_KEY
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: hrsg-db
+  #         property: connectionString
+  #     - key: CELERY_BROKER_URL
+  #       fromService:
+  #         name: hrsg-redis
+  #         type: keyvalue
+  #         property: connectionString

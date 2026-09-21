@@ -220,7 +220,49 @@ docker compose -f docker-compose.prod.yml run --rm migrate python manage.py seed
 | `seed_defaults` 재실행 (AC-18-4) | 신규 0건 |
 | Celery 워커 | prefork 2 concurrency, ERROR 0건 |
 
-## 7. 알려진 제약
+## 7. 데모 배포 (Render) — 시연 전용
+
+사내 운영은 위 Compose 구성을 쓴다. 프로젝트 시연용으로 PaaS 경로를 따로 두었다.
+
+> **실제 운전 데이터를 올리지 않는다.** `PROJECT.md` §1.5 는 외부 공개 서비스를 범위 밖으로
+> 두고 `specs/01` §1 은 폐쇄형 사내 시스템을 요구한다. 샘플 데이터만 쓴다.
+
+```
+Render 대시보드 → New → Blueprint → 저장소 연결 → render.yaml 자동 인식
+```
+
+`DJANGO_SECRET_KEY` 는 Render 가 생성하고, DB·Key Value 연결 문자열은 자동 주입된다.
+
+**무료 플랜 제약**
+
+| 항목 | 내용 |
+|---|---|
+| 백그라운드 워커 | 없음 → `DEMO_RUN_TASKS_INLINE=True` 로 요청 안에서 처리 |
+| 웹 인스턴스 | 미사용 시 잠듦 → 첫 접속이 수십 초 |
+| 메모리 | 작음 → `GUNICORN_WORKERS=2` 로 제한 (기본값이면 OOM) |
+| PostgreSQL | 유효 기간 있음 → 만료 시 재생성 |
+
+유료 워커를 붙이려면 `render.yaml` 의 주석 처리된 `hrsg-worker` 를 풀고
+`DEMO_RUN_TASKS_INLINE` 을 `False` 로 바꾼다.
+
+### 검증 기록 (2026-09-21)
+
+이미지를 실제로 빌드해 컨테이너로 띄워 확인했다.
+
+| 항목 | 결과 |
+|---|---|
+| 이미지 | 1.08GB |
+| SPA 진입 · 라우트 폴백 | `/` 200, `/dashboard` 200 |
+| 정적 자산 | JS 179KB `text/javascript`, CSS 320KB `text/css` |
+| API 라우팅 | `/api/` 가 SPA 폴백에 먹히지 않음 |
+| 헬스체크 | `ready` 200 (관리형 DB 연결) |
+| 동기 실행 | `enqueue` → `get_status` = SUCCESS + 결과 (워커 없음) |
+
+**로그인은 로컬에서 검증하지 못했다.** `prod.py` 를 상속해 `SESSION_COOKIE_SECURE=True` 인데
+로컬 테스트가 평문 HTTP 라 쿠키가 전송되지 않는다. Render 는 TLS 를 종단하므로 실제로는
+문제가 없지만, 배포 후 첫 로그인은 직접 확인한다.
+
+## 8. 알려진 제약
 
 - **`--pool=solo` 이슈는 리눅스 컨테이너에 없다.** macOS + Python 3.13에서 Celery 기본
   prefork 풀이 깨지는 문제(`ValueError: not enough values to unpack`)는 로컬 개발 한정이다.

@@ -1,0 +1,52 @@
+# 데모(PaaS) 배포용 단일 이미지.
+#
+# 사내 운영은 docker-compose.prod.yml 을 쓴다 (Nginx 가 SPA·정적 파일 서빙).
+# PaaS 는 컨테이너 하나만 띄우므로 SPA 를 이미지에 담아 Django(WhiteNoise)가 서빙한다.
+# PROJECT.md §1.5 는 외부 공개 서비스를 범위 밖으로 두므로 이 이미지는 시연 전용이다.
+
+# --- 1단계: SPA 빌드 ---
+FROM node:22-slim AS spa
+
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# --- 2단계: 백엔드 + SPA ---
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DJANGO_SETTINGS_MODULE=config.settings.demo
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libpq5 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY backend/requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY backend/ .
+COPY --from=spa /app/dist ./spa
+
+RUN test -f reports/fonts/NanumGothic-Regular.ttf \
+    && test -f reports/fonts/NanumGothic-Bold.ttf \
+    || (echo "나눔고딕 폰트 누락 — PDF 한글이 네모로 나갑니다" && exit 1)
+
+RUN useradd --create-home --uid 10001 hrsg \
+    && mkdir -p /app/var /app/staticfiles \
+    && chown -R hrsg:hrsg /app
+USER hrsg
+
+# collectstatic 은 빌드 시점에 끝낸다(무료 플랜은 기동이 느릴수록 불리하다).
+# SECRET_KEY 가드를 지나기 위한 빌드 전용 더미값 — 런타임 값은 Render 가 주입한다.
+RUN DJANGO_SECRET_KEY="build-time-placeholder-$(head -c 32 /dev/urandom | base64 | tr -d '\n')" \
+    DJANGO_ALLOWED_HOSTS=localhost \
+    python manage.py collectstatic --noinput
+
+# Render 는 $PORT 를 준다.
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed_defaults && gunicorn -c gunicorn.conf.py -b 0.0.0.0:${PORT:-8000} config.wsgi:application"]
