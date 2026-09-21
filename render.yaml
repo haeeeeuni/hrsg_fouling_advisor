@@ -51,10 +51,14 @@ services:
       # 유료 워커를 붙이면 False 로 바꾸고 아래 worker 서비스를 활성화한다.
       - key: DEMO_RUN_TASKS_INLINE
         value: "True"
-      # 무료 인스턴스는 메모리가 작다. 워커마다 pandas·scikit-learn 을 적재하므로
-      # 기본값(CPU×2+1)으로 두면 기동 중 OOM 으로 죽는다.
+      # 무료 인스턴스는 메모리가 512MB 뿐이다. 워커마다 pandas·scikit-learn 을 적재하고,
+      # DEMO_RUN_TASKS_INLINE 이면 분석까지 이 워커 안에서 돈다.
+      # 2개로도 분석 중 OOM 으로 인스턴스가 통째로 죽는 것을 확인해 1개로 줄였다.
       - key: GUNICORN_WORKERS
-        value: "2"
+        value: "1"
+      # 분석이 느린 무료 CPU(0.1) 에서 끊기지 않도록 넉넉히 준다.
+      - key: GUNICORN_TIMEOUT
+        value: "300"
 
   # --- Celery 워커 (유료 플랜 필요) ---
   # 무료 플랜에는 백그라운드 워커가 없어 주석 처리했다.
