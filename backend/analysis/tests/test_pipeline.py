@@ -421,3 +421,39 @@ def test_anonymous_cannot_recalculate(api, unit):
     )
 
     assert recalc(api, run.id, electricity_price=200).status_code == 401
+
+
+def test_benefit_deltas_match_fi_residuals(api, normal_user, unit_with_fouling):
+    """FI 가 높은데 Δ가 0 이면 편익이 통째로 사라진다.
+
+    compute_benefit 에 잔차 없는 프레임을 넘기면 current_deltas 가 0 을 돌려주는데,
+    분석은 성공으로 끝나 발견이 늦는다. FI 와 Δ 의 부호를 함께 묶어 둔다.
+    """
+    res = start_analysis(api, normal_user, unit_with_fouling)
+    run = AnalysisRun.objects.get(pk=res.data["analysis_run_id"])
+    assert run.status == RunStatus.SUCCESS
+
+    benefit = run.benefit
+    if run.result_fi and run.result_fi > 10:
+        assert (benefit.delta_dp_kpa or 0) > 0 or (benefit.delta_stack_c or 0) > 0
+        assert (benefit.daily_loss_cost or 0) > 0
+
+
+def test_recalculate_reuses_operating_context(api, normal_user, unit_with_fouling):
+    """재계산은 분석을 다시 돌리지 않으므로 평균 ST 출력·연료유량도 스냅샷에서 읽어야 한다.
+
+    빠뜨리면 같은 파라미터로 재계산해도 ST 손실이 달라진다.
+    """
+    res = start_analysis(api, normal_user, unit_with_fouling)
+    run_id = res.data["analysis_run_id"]
+
+    snapshot = AnalysisRun.objects.get(pk=run_id).benefit.params_snapshot
+    assert "_avg_st_power_mw" in snapshot
+    assert "_avg_fuel_flow" in snapshot
+
+    before = api.get(f"{ANALYSIS_URL}{run_id}/benefit/").data
+    after = recalc(api, run_id, electricity_price=before["params_snapshot"]["electricity_price"])
+
+    # 파라미터를 그대로 두고 재계산하면 값이 변하지 않아야 한다.
+    assert after.data["daily_loss_cost"] == pytest.approx(before["daily_loss_cost"])
+    assert after.data["power_loss_st_mw"] == pytest.approx(before["power_loss_st_mw"])

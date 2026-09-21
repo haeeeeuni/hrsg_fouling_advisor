@@ -405,7 +405,13 @@ def compute(
     sensitivity = sensitivity_analysis(net_for, params, delta) if with_sensitivity else []
 
     return BenefitResult(
-        params_snapshot=dict(params),
+        # 재계산(recalculate-benefit)이 분석을 다시 돌리지 않고도 같은 결과를 내려면
+        # 운전 맥락값도 남겨야 한다. 튜닝 파라미터가 아니므로 _ 접두사를 쓴다.
+        params_snapshot={
+            **params,
+            "_avg_st_power_mw": avg_st_power_mw,
+            "_avg_fuel_flow": avg_fuel_flow,
+        },
         delta_dp_kpa=max(float(delta_dp or 0.0), 0.0),
         delta_stack_c=max(float(delta_stack or 0.0), 0.0),
         power_loss_gt_mw=loss_gt,

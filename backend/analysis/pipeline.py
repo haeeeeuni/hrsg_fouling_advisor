@@ -288,7 +288,9 @@ def run_analysis(
     benefit_result = compute_benefit(
         unit=unit,
         config=config,
-        valid=valid,
+        # residuals 는 valid 에 잔차 컬럼을 더한 프레임이다. valid 를 넘기면
+        # current_deltas 가 잔차를 찾지 못해 Δ가 0 이 되고 편익이 통째로 사라진다.
+        valid=residuals,
         fi_now=fi_result.current_fi,
         slope_per_day=trend_result.slope_per_day,
         eta_days=trend_result.eta_days,
@@ -479,8 +481,14 @@ def current_deltas(valid: pd.DataFrame, config: dict[str, Any]) -> tuple[float, 
 
     군집별로 계산한 뒤 표본 수 가중 평균한다(운전 조건에 따라 손실이 다르므로).
     """
-    if valid.empty or "residual_dp" not in valid.columns:
+    if valid.empty:
         return 0.0, 0.0
+    if "residual_dp" not in valid.columns:
+        # 여기에 걸리면 호출부가 잔차 없는 프레임을 넘긴 것이다. 조용히 0 을 돌려주면
+        # 편익이 0 으로 나오면서도 분석은 성공한 것처럼 보여 발견이 늦어진다.
+        raise PipelineError(
+            STAGE_BENEFIT, "RESIDUALS_MISSING", "편익 계산에 잔차가 포함된 데이터가 필요합니다."
+        )
 
     window_days = int(config["current_window_days"])
     cutoff = valid["timestamp"].max() - pd.Timedelta(days=window_days)
@@ -639,6 +647,7 @@ def recalculate_benefit_for_run(run: AnalysisRun, overrides: dict[str, Any]) -> 
         rated_gt_mw=run.unit.rated_power_mw,
         rated_st_mw=run.unit.rated_st_power_mw,
         eta_days=forecast.eta_days if forecast else None,
+        avg_st_power_mw=(stored.params_snapshot or {}).get("_avg_st_power_mw"),
         avg_fuel_flow=(stored.params_snapshot or {}).get("_avg_fuel_flow"),
     )
 
