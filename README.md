@@ -194,9 +194,12 @@ frontend/src/
 | Frontend | Vue 3 (`<script setup>`), Vite, Vue Router, Pinia, Bootstrap 5, Chart.js |
 | Backend | Python 3.11+, Django 5, Django REST Framework |
 | 분석 | pandas, numpy, scikit-learn, scipy |
-| 리포트 | ReportLab(PDF), openpyxl(엑셀), matplotlib |
+| 리포트 | ReportLab(PDF), openpyxl(엑셀), matplotlib(차트 이미지) |
 | 비동기 | Celery + Redis |
+| 운영 | Gunicorn + Nginx |
 | DB | PostgreSQL 16 |
+
+정본은 `AGENTS.md` §2. 표에 없는 보조 라이브러리는 `requirements.txt` / `package.json` 을 본다.
 
 ---
 

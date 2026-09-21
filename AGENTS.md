@@ -25,12 +25,35 @@
 | Backend | Python 3.11+, Django 5.x, Django REST Framework |
 | ORM | Django ORM (raw SQL은 성능상 불가피할 때만, 주석으로 사유 명시) |
 | 분석 | pandas, numpy, scikit-learn, scipy |
-| 리포트 | openpyxl(엑셀), ReportLab 또는 WeasyPrint(PDF) |
+| 리포트 | openpyxl(엑셀), ReportLab(PDF), matplotlib(리포트 내 차트 이미지) |
 | DB | PostgreSQL |
+| 비동기 | Celery + Redis |
+| 운영 | Gunicorn(WSGI) + Nginx(리버스 프록시·정적 파일) |
 
 - **금지:** TypeScript 전환, Options API 혼용, jQuery, Bootstrap 이외의 UI 프레임워크, Django Template 기반 화면(관리자 `/admin/` 제외), **SQLite 사용(운영·로컬·테스트 전부)**.
 - 로컬 개발과 테스트도 PostgreSQL(Docker)을 사용한다.
 - 차트 라이브러리는 **Chart.js + vue-chartjs** 1종으로 고정한다(`specs/16-frontend.md` §1).
+- 위 표에 없는 보조 라이브러리(axios, dayjs, psycopg, python-dotenv 등)는 구현 세부사항이며
+  `requirements.txt` / `package.json` 이 정본이다. 아키텍처를 바꾸는 추가만 사전 합의 대상이다.
+
+> **보완(2026-09-21):** 아래 넷은 실제로 쓰고 있었으나 표에 누락되어 있었다.
+> 표만 보면 쓰지 않는 것처럼 보여 혼동을 준다.
+>
+> - **Celery + Redis** — `specs/18-nonfunctional.md` §7 이 "Celery + Redis(권장) 또는
+>   Django 백그라운드 스레드(소규모 대안)" 두 선택지를 제시했고, 앞을 채택했다.
+>   근거: 분석 60초·재학습 3분·100만 행 적재 5분(§1)이 모두 워커 격리가 필요한 길이이고,
+>   `specs/15-api.md` §1 의 `202 + job_id` 폴링 계약이 이를 전제한다.
+>   뷰는 Celery 를 직접 알지 못하고 `common/jobs.py` 의 `enqueue`/`get_status` 만 호출하므로
+>   실행기를 교체할 수 있다.
+> - **matplotlib** — PDF 리포트 안의 차트 이미지를 만든다(`reports/pdf/charts.py`).
+>   화면용 Chart.js 와 용도가 다르며 서로 대체하지 않는다.
+> - **Gunicorn · Nginx** — `specs/18` §7 의 배포 구성. Phase 8 에서 추가했다.
+> - **PDF 엔진은 ReportLab 으로 확정**했다. 원안의 "ReportLab 또는 WeasyPrint" 중
+>   ReportLab 을 쓴다. 동봉 폰트를 파일 경로로 직접 등록해야 서버에서 한글이 깨지지 않는데
+>   (`reports/pdf/fonts.py`), 그 제어가 ReportLab 쪽이 명확하다.
+>
+> **WhiteNoise 는 표에 넣지 않는다.** 데모(PaaS) 배포 전용이며 사내 운영 경로에서는 쓰지
+> 않는다(`config/settings/demo.py`, `specs/18` §7 데모 배포 절).
 
 ---
 
