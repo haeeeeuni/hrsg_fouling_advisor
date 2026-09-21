@@ -105,6 +105,30 @@ CELERY_BROKER_URL (사용 시)
 ```
 - `seed_defaults`는 **멱등**해야 한다(여러 번 실행해도 중복 생성 없음).
 
+### 구현 (2026-09-21, Phase 8)
+
+위 구성을 Docker Compose 로 옮겼다. 절차는 `DEPLOY.md` 참조.
+
+| 산출물 | 내용 |
+|--------|------|
+| `docker-compose.prod.yml` | nginx / app(gunicorn) / worker(celery) / db / redis |
+| `deploy/nginx/hrsg.conf` | SPA 폴백, `/api/` 프록시, `/static/`, `/media/` **internal** |
+| `backend/Dockerfile` | python:3.13-slim, 비-root 실행, 동봉 폰트 존재 검증 |
+| `frontend/Dockerfile` | 빌드 전용 — 산출물만 nginx 로 넘긴다 |
+| `backend/gunicorn.conf.py` | 워커 수·타임아웃. nginx `proxy_read_timeout` 보다 짧게 |
+| `DEPLOY.md` | 구동·백업·롤백·배포 후 점검 |
+
+**추가된 동작 (원안에 없던 것):**
+
+- **헬스체크** `GET /api/health/live/`, `GET /api/health/ready/` — 컨테이너·LB 가 기동을
+  판단할 경로가 필요하다. 인증 없이 열되 내부 구성(버전·경로·예외)은 노출하지 않는다.
+  둘을 나눈 이유는 DB 가 잠깐 끊겼다고 컨테이너를 재시작하면 상황이 더 나빠지기 때문이다.
+- **`SECURE_SSL_REDIRECT`** — §2 가 Secure 쿠키와 HSTS 를 요구하므로 HTTPS 가 전제다.
+  단 헬스체크는 컨테이너 내부에서 http 로 들어오므로 `SECURE_REDIRECT_EXEMPT` 로 뺀다.
+  빼지 않으면 301 이 나가 기동 판정이 실패한다.
+- **`SECRET_KEY` 기동 거부** — 플레이스홀더이거나 50자 미만이면 `prod.py` 가 예외를 던진다.
+  §2 가 `.env` 관리를 요구하지만, 빠뜨렸을 때 조용히 취약한 상태로 뜨는 것을 막는다.
+
 ## 8. 테스트 기준
 | 대상 | 기준 |
 |------|------|

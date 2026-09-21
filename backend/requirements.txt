@@ -8,6 +8,7 @@ django-cors-headers>=4.4,<5
 python-dotenv>=1.0,<2
 
 # --- 비동기 작업 (Phase 2~) : specs/18 §7 ---
+gunicorn>=23.0,<24
 celery>=5.4,<6
 redis>=5.0,<7
 

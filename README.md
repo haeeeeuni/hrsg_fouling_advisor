@@ -221,14 +221,29 @@ frontend/src/
 
 ---
 
+## 배포
+
+운영 구성(Nginx + Gunicorn + Celery + PostgreSQL + Redis)은 Docker Compose로 묶여 있다.
+
+```bash
+# .env 에 DJANGO_SECRET_KEY / DJANGO_ALLOWED_HOSTS / DB_PASSWORD 를 채운 뒤
+docker compose -f docker-compose.prod.yml up -d --build
+curl -fsS https://<도메인>/api/health/ready/
+```
+
+절차·백업·롤백·배포 후 점검은 **`DEPLOY.md`** 에 있다.
+
+---
+
 ## 문서
 
 | 문서 | 내용 |
 |------|------|
 | `PROJECT.md` | 프로젝트 개요·아키텍처·용어집 — 단일 진실 공급원 |
+| `DEPLOY.md` | 운영 배포 절차 (`specs/18` §7 구현) |
 | `AGENTS.md` | 코딩 규칙, 스택 고정, 레이어 책임, 커밋 규칙 |
 | `CLAUDE.md` | 여러 명세를 읽어야 파악되는 전체 그림과 비자명한 결합들 |
-| `specs/00~19` | 기능별 상세 명세. 각 문서 끝의 **수용 기준(AC)** 이 사실상 테스트 명세다 |
+|  `specs/00~20` | 기능별 상세 명세. 각 문서 끝의 **수용 기준(AC)** 이 사실상 테스트 명세다 |
 
 기능 하나를 건드릴 때는 최소한 셋을 읽는다:
 해당 `specs/NN-*.md` → `specs/14-data-model.md` → `specs/15-api.md`.
@@ -248,7 +263,7 @@ frontend/src/
 | M5 | 이력 및 리포트 — 키워드 추출·전후 비교·PDF/엑셀 | 완료 |
 | M6 | 관리자 콘솔 — 설정 화면·모델 관리·감사 로그 | 완료 |
 | M7 | 옵션 기능 — 자동 재계산·백테스트·호기 간 비교 | 완료 |
-| M8 | 안정화 — 성능 측정, 전체 테스트 수행 | 진행 중 |
+| M8 | 안정화 — 전체 테스트 수행, 배포 구성 | 배포 구성 완료 / 성능 측정 남음 |
 
 ---
 

@@ -28,3 +28,6 @@ backend/staticfiles/
 # Node
 frontend/node_modules/
 frontend/dist/
+
+# TLS 인증서·키는 저장소에 두지 않는다 (AGENTS.md §7)
+deploy/certs/
