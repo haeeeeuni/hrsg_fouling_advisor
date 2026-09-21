@@ -75,8 +75,6 @@ async function exportReport(format) {
 
 <template>
   <div>
-    <h1 class="h4 mb-3">세정 전후 비교</h1>
-
     <div class="alert alert-secondary py-2 small" role="note">
       부하·외기 조건이 다르면 차압과 스택온도가 자연히 달라집니다.
       비교는 <strong>양쪽 모두 표본이 있는 공통 군집</strong>에서만 수행합니다.

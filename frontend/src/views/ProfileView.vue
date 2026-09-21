@@ -40,8 +40,6 @@ async function onSubmit() {
 
 <template>
   <div>
-    <h1 class="h4 mb-3">내 정보</h1>
-
     <div class="row g-4">
       <div class="col-12 col-xl-5">
         <div class="card h-100">

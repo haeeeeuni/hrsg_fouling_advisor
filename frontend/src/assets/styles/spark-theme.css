@@ -1,0 +1,536 @@
+/**
+ * Spark 테마 (specs/20).
+ *
+ * https://themewagon.com/themes/spark/ 의 Bootstrap 5 관리자 템플릿에서
+ * 디자인 토큰과 컴포넌트 스타일만 가져온다. 템플릿 마크업은 쓰지 않는다.
+ *
+ * Bootstrap 의 `--bs-*` 변수를 덮어써서 기존 유틸리티 클래스(btn-primary,
+ * text-bg-success, table 등)가 손대지 않아도 테마를 따라가게 한다.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* --- Spark 브랜드 --- */
+  --brand-forest-dark: #051c12;
+  --brand-forest-medium: #072f1f;
+  --brand-forest-light: #1a3e30;
+  --brand-lime: #b4f105;
+  --brand-lime-hover: #c1f824;
+  --brand-lime-translucent: rgba(180, 241, 5, 0.15);
+
+  --text-main: #0b130f;
+  --text-muted-green: #6c7e75;
+  --text-sidebar-muted: #879a91;
+
+  --card-background: #ffffff;
+  --border-light: #e9efef;
+  --border-dark-green: rgba(255, 255, 255, 0.1);
+
+  --radius-xxl: 24px;
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+
+  --shadow-sm: 0 2px 8px rgba(11, 19, 15, 0.02);
+  --shadow-md: 0 10px 30px rgba(11, 19, 15, 0.04);
+  --shadow-lg: 0 20px 50px rgba(11, 19, 15, 0.08);
+
+  --sidebar-width: 280px;
+  --navbar-height: 80px;
+
+  /* --- Bootstrap 변수 덮어쓰기 --- */
+  --bs-body-bg: #f4f6f5;
+  --bs-body-color: var(--text-main);
+  --bs-secondary-color: var(--text-muted-green);
+  --bs-border-color: var(--border-light);
+  --bs-border-radius: var(--radius-md);
+  --bs-border-radius-lg: var(--radius-lg);
+  --bs-border-radius-xl: var(--radius-xl);
+  --bs-link-color: var(--brand-forest-medium);
+  --bs-link-hover-color: var(--brand-forest-dark);
+
+  /*
+   * 숫자·영문은 Plus Jakarta Sans, 한글은 글리프가 없어 Pretendard 로 떨어진다.
+   * 순서를 바꾸면 한글이 먼저 잡혀 숫자까지 한글 폰트로 렌더된다.
+   */
+  --bs-body-font-family: 'Plus Jakarta Sans', 'Pretendard', -apple-system,
+    BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+
+  /*
+   * primary 만 Spark 의 숲 녹색으로 바꾼다.
+   * success/warning/danger 는 FI 등급(정상/주의/경고)의 의미 색이라 건드리지 않는다
+   * (specs/20 "등급 색은 테마보다 우선한다").
+   */
+  --bs-primary: var(--brand-forest-medium);
+  --bs-primary-rgb: 7, 47, 31;
+}
+
+body {
+  font-size: 0.925rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--text-main);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* -------------------------------------------------- 셸 레이아웃 */
+
+.spark-sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--brand-forest-dark);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+  padding: 1.75rem 1.25rem;
+  border-right: 1px solid var(--border-dark-green);
+  overflow-y: auto;
+}
+
+.spark-main {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  min-width: 0;
+}
+
+/* 셸이 없는 화면(로그인)은 사이드바 자리를 비우지 않는다. */
+.spark-main--bare {
+  margin-left: 0;
+}
+
+.spark-content {
+  padding: 1.5rem 2rem 2.5rem;
+}
+
+/* -------------------------------------------------- 사이드바 */
+
+.spark-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  padding: 0 0.5rem 1.75rem;
+}
+
+.spark-brand:hover {
+  color: var(--brand-lime);
+}
+
+.spark-brand i {
+  color: var(--brand-lime);
+  font-size: 1.4rem;
+}
+
+.spark-menu-title {
+  color: var(--text-sidebar-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.spark-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--text-sidebar-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.spark-menu-link i {
+  font-size: 1.05rem;
+}
+
+.spark-menu-link:hover {
+  background-color: var(--brand-forest-light);
+  color: #ffffff;
+}
+
+.spark-menu-link.active {
+  background-color: var(--brand-lime-translucent);
+  color: #ffffff;
+}
+
+/* 활성 항목 왼쪽의 라임 막대 — 색 외에 형태로도 구분된다 (specs/16 §8). */
+.spark-menu-link.active::before {
+  content: '';
+  position: absolute;
+  left: -1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+  background-color: var(--brand-lime);
+}
+
+.spark-menu-link.active i {
+  color: var(--brand-lime);
+}
+
+.spark-sidebar-footer {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-dark-green);
+  color: var(--text-sidebar-muted);
+  font-size: 0.78rem;
+}
+
+.spark-sidebar-footer .spark-user-name {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* -------------------------------------------------- 상단 네비 */
+
+.spark-navbar {
+  height: var(--navbar-height);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 2rem;
+}
+
+.spark-page-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-bottom: 0;
+  letter-spacing: -0.03em;
+}
+
+/* 알약형 컨트롤 — Spark 의 .btn-date-picker 계열 */
+.spark-pill {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-light);
+  border-radius: 50rem;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.spark-pill:focus {
+  border-color: var(--brand-forest-light);
+  box-shadow: 0 0 0 0.2rem var(--brand-lime-translucent);
+}
+
+select.spark-pill {
+  padding-right: 2.25rem;
+}
+
+/* -------------------------------------------------- 카드 */
+
+.card {
+  background-color: var(--card-background);
+  border: none;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 700;
+}
+
+.card-title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Spark 의 어두운 강조 카드 */
+.spark-card-dark {
+  background-color: var(--brand-forest-medium);
+  color: #ffffff;
+}
+
+.spark-card-dark .text-muted,
+.spark-card-dark .text-secondary {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.spark-stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted-green);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.spark-stat-value {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.4rem;
+}
+
+.spark-card-dark .spark-stat-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.spark-card-dark .spark-stat-value {
+  color: #ffffff;
+}
+
+/* -------------------------------------------------- 표 */
+
+.table {
+  --bs-table-border-color: var(--border-light);
+  margin-bottom: 0;
+}
+
+.table > thead th {
+  color: var(--text-muted-green);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+.table > tbody > tr:hover > * {
+  background-color: #f8fbf9;
+}
+
+.table caption {
+  color: var(--text-muted-green);
+  caption-side: bottom;
+}
+
+/* -------------------------------------------------- 버튼 · 배지 · 폼 */
+
+.btn {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.btn-primary {
+  background-color: var(--brand-forest-medium);
+  border-color: var(--brand-forest-medium);
+  color: #ffffff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--brand-forest-dark);
+  border-color: var(--brand-forest-dark);
+  color: var(--brand-lime);
+}
+
+/* 라임은 밝아서 전경색이 반드시 진해야 한다 (specs/20 접근성). */
+.btn-lime {
+  background-color: var(--brand-lime);
+  border-color: var(--brand-lime);
+  color: var(--brand-forest-dark);
+  font-weight: 700;
+}
+
+.btn-lime:hover,
+.btn-lime:focus {
+  background-color: var(--brand-lime-hover);
+  border-color: var(--brand-lime-hover);
+  color: var(--brand-forest-dark);
+}
+
+.btn-outline-secondary {
+  border-color: var(--border-light);
+  color: var(--text-muted-green);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--brand-forest-medium);
+  border-color: var(--brand-forest-medium);
+  color: #ffffff;
+}
+
+.badge {
+  border-radius: 50rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding: 0.4em 0.75em;
+}
+
+.form-control,
+.form-select {
+  border-color: var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--brand-forest-light);
+  box-shadow: 0 0 0 0.2rem var(--brand-lime-translucent);
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.form-check-input:checked {
+  background-color: var(--brand-forest-medium);
+  border-color: var(--brand-forest-medium);
+}
+
+.form-check-input:focus {
+  border-color: var(--brand-forest-light);
+  box-shadow: 0 0 0 0.2rem var(--brand-lime-translucent);
+}
+
+/* -------------------------------------------------- 탭 · 알림 */
+
+.nav-tabs {
+  border-bottom: 1px solid var(--border-light);
+  gap: 0.25rem;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--text-muted-green);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.6rem 1rem;
+}
+
+.nav-tabs .nav-link:hover {
+  background-color: rgba(7, 47, 31, 0.04);
+  color: var(--text-main);
+}
+
+.nav-tabs .nav-link.active {
+  background-color: transparent;
+  color: var(--brand-forest-dark);
+  box-shadow: inset 0 -2px 0 var(--brand-forest-medium);
+}
+
+.alert {
+  border: none;
+  border-radius: var(--radius-lg);
+}
+
+.alert-light {
+  background-color: var(--card-background);
+  box-shadow: var(--shadow-sm);
+}
+
+.dropdown-menu {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 0.4rem;
+}
+
+.dropdown-item {
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(7, 47, 31, 0.06);
+}
+
+/* -------------------------------------------------- 로그인 */
+
+.spark-auth {
+  min-height: 100vh;
+  background-color: var(--brand-forest-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.spark-auth .card {
+  border-radius: var(--radius-xxl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 420px;
+}
+
+/* -------------------------------------------------- 좁은 화면 */
+
+/* 최소 지원 폭은 1280px 이지만(specs/11 §9), 그 아래에서도 읽을 수는 있어야 한다. */
+@media (max-width: 991.98px) {
+  .spark-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .spark-sidebar .spark-menu-title,
+  .spark-sidebar-footer {
+    display: none;
+  }
+
+  .spark-menu-link.active::before {
+    display: none;
+  }
+
+  .spark-main {
+    margin-left: 0;
+  }
+
+  .spark-navbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 1rem;
+  }
+
+  .spark-content {
+    padding: 1rem;
+  }
+}

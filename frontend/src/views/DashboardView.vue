@@ -95,8 +95,7 @@ watch(
 
 <template>
   <div>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h1 class="h4 mb-0">대시보드</h1>
+    <div class="d-flex justify-content-end align-items-center mb-3">
       <div>
         <button v-if="analysis.hasResult" class="btn btn-outline-secondary btn-sm me-1"
                 :disabled="exporting" @click="exportReport('pdf')">PDF 다운로드</button>
@@ -104,7 +103,7 @@ watch(
                 :disabled="exporting" @click="exportReport('xlsx')">엑셀 다운로드</button>
         <RouterLink v-if="analysis.hasResult" class="btn btn-outline-primary btn-sm me-1"
                     :to="{ name: 'comparison' }">세정 전후 비교</RouterLink>
-        <RouterLink class="btn btn-primary btn-sm" :to="{ name: 'analysis-run' }">분석 실행</RouterLink>
+        <RouterLink class="btn btn-lime btn-sm" :to="{ name: 'analysis-run' }">분석 실행</RouterLink>
       </div>
     </div>
 
@@ -142,7 +141,7 @@ watch(
       <!-- KPI 4종 (specs/11 §3) -->
       <div class="row g-3 mb-3">
         <div class="col-12 col-md-6 col-xl-3">
-          <KpiCard label="현재 오염도 지수" :value="formatFi(run.result_fi)">
+          <KpiCard label="현재 오염도 지수" :value="formatFi(run.result_fi)" dark>
             <template #hint>신뢰도 {{ run.result_confidence }}</template>
           </KpiCard>
         </div>

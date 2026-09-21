@@ -19,7 +19,7 @@ const items = [
 
 <template>
   <div>
-    <h1 class="h4 mb-3">관리자 콘솔</h1>
+    <p class="spark-menu-title text-body-secondary px-0 mb-2">관리자 콘솔</p>
     <ul class="nav nav-tabs mb-3 flex-wrap">
       <li v-for="item in items" :key="item.label" class="nav-item">
         <RouterLink class="nav-link" :to="item.to" active-class="active">

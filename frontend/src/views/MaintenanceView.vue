@@ -131,8 +131,6 @@ const CATEGORY_LABELS = {
 
 <template>
   <div>
-    <h1 class="h4 mb-3">정비 이력</h1>
-
     <div class="card mb-3">
       <div class="card-body">
         <div class="row g-3 align-items-end">

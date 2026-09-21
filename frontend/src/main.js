@@ -1,5 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
+import '@/assets/styles/spark-theme.css'
 import '@/assets/styles/main.css'
 
 import { createPinia } from 'pinia'

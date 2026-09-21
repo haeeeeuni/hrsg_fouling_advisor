@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="dropdown">
     <button
-      class="btn btn-sm btn-outline-light position-relative"
+      class="btn btn-sm spark-pill position-relative"
       type="button"
       data-bs-toggle="dropdown"
       aria-expanded="false"

@@ -126,8 +126,6 @@ async function onCancel() {
 
 <template>
   <div>
-    <h1 class="h4 mb-3">데이터 업로드</h1>
-
     <div v-if="!units.uploadableUnits.length" class="card">
       <div class="card-body">
         <EmptyState

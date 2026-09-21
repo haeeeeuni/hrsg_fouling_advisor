@@ -30,8 +30,8 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="d-flex justify-content-center align-items-center vh-100 bg-body-tertiary">
-    <div class="card shadow-sm" style="width: 24rem">
+  <div class="spark-auth">
+    <div class="card">
       <div class="card-body p-4">
         <h1 class="h5 mb-1">HRSG 오염도 진단</h1>
         <p class="text-secondary small mb-4">사내 담당자 전용 시스템입니다.</p>

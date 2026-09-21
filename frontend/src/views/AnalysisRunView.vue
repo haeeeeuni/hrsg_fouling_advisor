@@ -102,8 +102,6 @@ async function run() {
 
 <template>
   <div>
-    <h1 class="h4 mb-3">분석 실행</h1>
-
     <EmptyState
       v-if="!units.activeUnits.length"
       title="분석할 호기가 없습니다."

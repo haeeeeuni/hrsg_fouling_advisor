@@ -51,8 +51,6 @@ async function download(report) {
 
 <template>
   <div>
-    <h1 class="h4 mb-3">리포트</h1>
-
     <div class="card mb-3">
       <div class="card-body">
         <h2 class="h6 mb-3">분석 결과에서 생성</h2>
