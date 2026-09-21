@@ -150,6 +150,20 @@ npm run build
 npm run test
 ```
 
+## 테스트 환경에서 한 번씩 걸리는 것
+
+- **Celery eager 모드는 `override_settings` 로만 켜진다.** `current_app.conf` 에 직접 대입하거나
+  `conf.update()` 를 써도 먹히지 않는다 — 앱이 `config_from_object("django.conf:settings")` 로
+  읽어서 Django settings 값이 우선한다. 픽스처는 루트 `conftest.py` 에 있다.
+  `EAGER_PROPAGATES` 는 꺼 둔다. 켜면 태스크 예외가 뷰까지 올라와 500 이 되는데,
+  운영에서는 뷰가 이미 202 를 준 뒤 워커가 실패를 DB 에 기록하므로 그 경로를 검증할 수 없게 된다.
+- **로그인 스로틀 카운터는 테스트마다 비운다**(IP 기준 분당 10회). 안 비우면 뒤 테스트가 429 를 받는다.
+- **Node 26 은 자체 `localStorage` 전역을 갖는데 `--localstorage-file` 없이는 `undefined` 이고
+  jsdom 구현을 가린다.** `frontend/tests/setup.js` 가 비어 있을 때만 채운다.
+- **`git bisect` 주의:** `6380e16`(fix) 한 지점은 테스트가 실패한다. 코드 버그와 테스트 환경 문제가
+  서로를 가리고 있어 두 커밋(`6380e16`, `4489578`)을 같이 적용해야 통과한다.
+  이 구간을 지날 때는 쫓는 버그의 테스트만 판정 기준으로 쓰거나 `git bisect skip` 한다.
+
 ## 분석 로직 테스트 방식
 
 `analysis/services/` 는 Django 모델을 import 하지 않는 순수 함수여야 하고, 합성 데이터로 **성질 기반 검증**을 한다
