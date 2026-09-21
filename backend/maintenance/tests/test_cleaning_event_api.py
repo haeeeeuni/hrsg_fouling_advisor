@@ -96,7 +96,14 @@ def test_filter_by_unit(api, normal_user, admin_user, unit):
 
 
 def test_admin_can_delete(api, admin_user, unit):
+    """specs/10 §4 — 삭제는 영향 범위를 함께 알려야 하므로 204 가 아니라 200 + 본문이다."""
     event = CleaningEvent.objects.create(unit=unit, cleaned_at=timezone.now())
     api.force_authenticate(admin_user)
 
-    assert api.delete(f"{URL}{event.id}/").status_code == 204
+    res = api.delete(f"{URL}{event.id}/")
+
+    assert res.status_code == 200
+    assert res.data["deleted"] is True
+    assert "impact" in res.data
+    assert res.data["note"]
+    assert not CleaningEvent.objects.filter(pk=event.id).exists()

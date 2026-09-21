@@ -12,6 +12,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+# pytest-cov 병렬 모드가 남기는 .coverage.<host>.<pid>.<rand>
+.coverage.*
 htmlcov/
 
 # 환경 변수·비밀정보 (AGENTS.md §7)

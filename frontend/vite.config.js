@@ -25,5 +25,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.spec.js'],
+    // Node 26 의 실험적 localStorage 전역이 jsdom 구현을 가리는 문제를 보정한다.
+    setupFiles: ['./tests/setup.js'],
   },
 })

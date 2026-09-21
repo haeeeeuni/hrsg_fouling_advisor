@@ -206,13 +206,34 @@ def test_overwrite_policy_updates_existing_rows(api, normal_user, mapped_unit):
     batch_id = post_validate(api, mapped_unit).data["batch_id"]
     commit(api, batch_id)
 
-    changed = CSV_BODY.replace("150,10,600,400,3.0", "999,10,600,400,3.0")
+    # 정격 160MW 설비이므로 범위 안의 값을 써야 한다(999 는 OUT_OF_RANGE 로 제거된다).
+    changed = CSV_BODY.replace("150,10,600,400,3.0", "155,10,600,400,3.0")
     second = post_validate(api, mapped_unit, body=changed, confirm_duplicate_file=True).data[
         "batch_id"
     ]
     commit(api, second, duplicate_policy="OVERWRITE")
 
-    assert Measurement.objects.order_by("timestamp").first().gt_power_mw == 999
+    rows = list(Measurement.objects.order_by("timestamp"))
+    assert rows[0].gt_power_mw == 155
+    # 나머지 행은 건드리지 않는다.
+    assert [r.gt_power_mw for r in rows[1:]] == [151, 152]
+
+
+def test_out_of_range_value_is_dropped_with_warning(api, normal_user, mapped_unit):
+    """정격을 크게 벗어난 값은 경고를 남기고 해당 셀만 비운다 (specs/03 §4.4)."""
+    api.force_authenticate(normal_user)
+    body = CSV_BODY.replace("150,10,600,400,3.0", "999,10,600,400,3.0")
+
+    batch_id = post_validate(api, mapped_unit, body=body).data["batch_id"]
+    commit(api, batch_id)
+
+    batch = UploadBatch.objects.get(pk=batch_id)
+    codes = {w["code"] for w in batch.validation_report["warnings"]}
+    assert "OUT_OF_RANGE" in codes
+    # 행 전체가 아니라 해당 셀만 비워진다.
+    first = Measurement.objects.order_by("timestamp").first()
+    assert first.gt_power_mw is None
+    assert first.stack_temp_c == 110
 
 
 def test_skip_policy_keeps_existing_rows(api, normal_user, mapped_unit):
