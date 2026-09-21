@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **배포:** `docker-compose.prod.yml` + `deploy/nginx/hrsg.conf` + `DEPLOY.md` (`specs/18` §7).
   헬스체크는 `/api/health/live/`(프로세스) 와 `/api/health/ready/`(DB 포함) 두 갈래다.
   `prod.py` 는 `SECRET_KEY` 가 플레이스홀더이거나 50자 미만이면 **기동을 거부한다.**
-- **남은 것:** M8 성능 측정(AC-18-1 100만 행 5분) 과 Compose 스택 실제 기동 검증.
+- **남은 것:** M8 성능 측정(AC-18-1 100만 행 5분). Compose 스택은 2026-09-21 기동 검증 완료.
 
 **AC-13-4(하드코딩 없음)는 `analysis/tests/test_no_hardcoded_settings.py` 가 상시 검사한다.**
 로직 한가운데 매직 넘버는 금지, 이름 붙은 모듈 상수 폴백과 함수 기본 인자는 허용이다

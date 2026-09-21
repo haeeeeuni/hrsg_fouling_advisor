@@ -22,7 +22,9 @@ COPY . .
 
 # 한글 리포트용 동봉 폰트가 이미지에 들어갔는지 확인한다.
 # 빠지면 PDF 의 한글이 전부 네모로 나가는데 런타임에야 발견된다.
-RUN test -f reports/fonts/NanumGothic.ttf || (echo "나눔고딕 폰트 누락" && exit 1)
+RUN test -f reports/fonts/NanumGothic-Regular.ttf \
+    && test -f reports/fonts/NanumGothic-Bold.ttf \
+    || (echo "나눔고딕 폰트 누락 — PDF 한글이 네모로 나갑니다" && exit 1)
 
 # root 로 돌리지 않는다.
 RUN useradd --create-home --uid 10001 hrsg \

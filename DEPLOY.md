@@ -177,6 +177,7 @@ docker compose -f docker-compose.prod.yml up -d --scale worker=3
 ## 5. 배포 후 점검
 
 `specs/18` §10 수용 기준 중 배포와 직접 관련된 항목이다.
+아래 항목은 **2026-09-21 Docker Desktop 29.8.0 / Compose v5.5.1 에서 전부 실행해 통과를 확인했다.**
 
 ```bash
 # AC-18-2 — DEBUG=False 에서 정상 동작 + 보안 헤더
@@ -204,11 +205,26 @@ docker compose -f docker-compose.prod.yml run --rm migrate python manage.py seed
 
 ---
 
-## 6. 알려진 제약
+## 6. 검증 기록 (2026-09-21)
+
+| 항목 | 결과 |
+|---|---|
+| 이미지 빌드 | app/worker/migrate 각 1.07GB, frontend-build 7.94MB |
+| 기동 순서 | migrate 완료 → app·worker → (app healthy) → nginx |
+| 헬스체크 | `ready` = `{"status":"ok","checks":{"database":true}}` |
+| HTTP → HTTPS | 301 |
+| 보안 헤더 (AC-18-2) | HSTS · X-Content-Type-Options · X-Frame-Options · Referrer-Policy |
+| 비인증 응답 | 401 + 공통 에러 포맷 |
+| 로그인 | `관리자/ADM01/qwer` 성공, 세션·CSRF 쿠키에 Secure 플래그 |
+| `/media/` 직접 접근 | 404 (internal) |
+| `seed_defaults` 재실행 (AC-18-4) | 신규 0건 |
+| Celery 워커 | prefork 2 concurrency, ERROR 0건 |
+
+## 7. 알려진 제약
 
 - **`--pool=solo` 이슈는 리눅스 컨테이너에 없다.** macOS + Python 3.13에서 Celery 기본
   prefork 풀이 깨지는 문제(`ValueError: not enough values to unpack`)는 로컬 개발 한정이다.
-  compose는 기본 풀을 쓴다.
+  컨테이너에서 기본 prefork 로 정상 동작하는 것을 확인했다.
 - **동시 사용자 20명 규모**를 전제로 한 구성이다(`PROJECT.md` §1.6). 그 이상이면 `db` 를
   관리형 PostgreSQL로 분리하고 `app`/`worker` 를 별도 호스트로 나누는 편이 낫다.
 - **Redis는 영속화하지 않는다.** 작업 상태는 휘발되지만 `UploadBatch`/`AnalysisRun` 같은
