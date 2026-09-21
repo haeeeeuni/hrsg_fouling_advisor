@@ -13,7 +13,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **배포:** `docker-compose.prod.yml` + `deploy/nginx/hrsg.conf` + `DEPLOY.md` (`specs/18` §7).
   헬스체크는 `/api/health/live/`(프로세스) 와 `/api/health/ready/`(DB 포함) 두 갈래다.
   `prod.py` 는 `SECRET_KEY` 가 플레이스홀더이거나 50자 미만이면 **기동을 거부한다.**
-- **남은 것:** M8 성능 측정(AC-18-1 100만 행 5분). Compose 스택은 2026-09-21 기동 검증 완료.
+- **M8 완료.** Compose 스택 기동 검증(2026-09-21)과 `specs/18` §1 성능 측정을 마쳤다.
+  실측: 105만 행 적재 155.5초(기준 300초), 분석 7.5초(기준 60초), PDF 4.4초, 엑셀 0.2초.
+  **미구현 확인:** `specs/06` §120 이 요구하는 `joblib.dump` 모델 아티팩트 저장이 빠져 있다
+  (`ModelVersion.artifact_path` 필드만 있고 쓰는 코드가 없다).
 
 **AC-13-4(하드코딩 없음)는 `analysis/tests/test_no_hardcoded_settings.py` 가 상시 검사한다.**
 로직 한가운데 매직 넘버는 금지, 이름 붙은 모듈 상수 폴백과 함수 기본 인자는 허용이다
