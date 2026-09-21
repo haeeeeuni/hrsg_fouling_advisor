@@ -220,7 +220,7 @@ def _run_lookahead(
 
     _fill_actual_fi(unit, summary.cases, warnings)
 
-    predicted, actual = _recovery_pairs(unit, events)
+    predicted, actual = _recovery_pairs(summary.cases)
     result = BacktestResult.objects.create(
         unit=unit,
         created_by_id=created_by_id,
@@ -265,17 +265,23 @@ def _fill_actual_fi(unit: Unit, cases: list, warnings: list[dict]) -> None:
         case.fi_at_actual = series.get(case.actual_date)
 
 
-def _recovery_pairs(unit: Unit, events: list) -> tuple[list[float], list[float]]:
-    """예측 Δ차압 vs 세정 전후 비교로 확인된 실제 회복량 (specs/19 §2.3).
+def _recovery_pairs(cases: list) -> tuple[list[float], list[float]]:
+    """컷오프 시점의 예측 Δ차압 vs 세정 전후 비교로 확인된 실제 회복량 (specs/19 §2.3).
 
-    손실 모델에서 편익은 Δ차압에 비례하므로, 두 값의 비가 곧 손실 계수의 보정 배수다.
-    세정 전후 비교 결과가 없는 세정은 짝을 만들지 않는다.
+    손실 모델에서 편익은 Δ차압에 비례하므로 두 값의 비가 곧 손실 계수의 보정 배수다.
+
+    예측값은 **백테스트가 그 컷오프에서 직접 계산한 값**을 쓴다. 운영 이력에서
+    "세정 전에 실행된 분석"을 찾는 방식은 과거 데이터를 나중에 적재한 경우
+    (executed_at 이 전부 최근) 짝이 하나도 만들어지지 않는다.
     """
     predicted: list[float] = []
     actual: list[float] = []
 
-    for event in events:
-        report = event.comparisons.order_by("-created_at").first()
+    for case in cases:
+        if not case.predicted_delta_dp:
+            continue
+        event = CleaningEvent.objects.filter(pk=case.cleaning_event_id).first()
+        report = event.comparisons.order_by("-created_at").first() if event else None
         if report is None:
             continue
         rows = (report.metrics or {}).get("rows") or []
@@ -283,20 +289,7 @@ def _recovery_pairs(unit: Unit, events: list) -> tuple[list[float], list[float]]
         if row is None or row.get("delta") is None:
             continue
 
-        # 세정 직전의 성공 분석이 그때 예측했던 Δ차압
-        before_run = (
-            AnalysisRun.objects.filter(
-                unit=unit, status=RunStatus.SUCCESS, executed_at__lte=event.cleaned_at
-            )
-            .select_related("benefit")
-            .order_by("-executed_at")
-            .first()
-        )
-        benefit = getattr(before_run, "benefit", None) if before_run else None
-        if benefit is None or not benefit.delta_dp_kpa:
-            continue
-
-        predicted.append(float(benefit.delta_dp_kpa))
+        predicted.append(float(case.predicted_delta_dp))
         # 잔차는 세정 후 내려가므로 회복량은 부호를 뒤집은 값이다.
         actual.append(-float(row["delta"]))
 
@@ -328,6 +321,7 @@ def _run_case(unit: Unit, event, cutoff, lookahead_days: int) -> bt.CaseResult:
             run_analysis(ctx)
             run.refresh_from_db()
             trend = getattr(run, "trend", None)
+            benefit = getattr(run, "benefit", None)
             case = bt.build_case(
                 cleaning_event_id=event.id,
                 actual_date=actual_date,
@@ -335,6 +329,8 @@ def _run_case(unit: Unit, event, cutoff, lookahead_days: int) -> bt.CaseResult:
                 predicted_date=trend.eta_date if trend else None,
                 trend_status=trend.status if trend else "",
                 fi_at_cutoff=run.result_fi,
+                # 롤백 전에 꺼내 둔다 — 이 트랜잭션이 끝나면 접근할 수 없다.
+                predicted_delta_dp=benefit.delta_dp_kpa if benefit else None,
                 note="" if trend and trend.eta_date else "임계치 도달 예측이 나오지 않았습니다.",
             )
             # 백테스트 산출물은 운영 이력에 남기지 않는다.

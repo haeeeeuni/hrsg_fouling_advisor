@@ -27,6 +27,8 @@ class CaseResult:
     error_days: int | None = None
     fi_at_cutoff: float | None = None
     fi_at_actual: float | None = None
+    # 컷오프 시점에 편익 모델이 본 Δ차압. 실제 회복량과 짝지어 계수 보정에 쓴다(§2.3).
+    predicted_delta_dp: float | None = None
     trend_status: str = ""
     note: str = ""
 
@@ -39,6 +41,7 @@ class CaseResult:
             "error_days": self.error_days,
             "fi_at_cutoff": _round(self.fi_at_cutoff),
             "fi_at_actual": _round(self.fi_at_actual),
+            "predicted_delta_dp": _round(self.predicted_delta_dp),
             "trend_status": self.trend_status,
             "note": self.note,
         }
@@ -87,6 +90,7 @@ def build_case(
     trend_status: str,
     fi_at_cutoff: float | None = None,
     fi_at_actual: float | None = None,
+    predicted_delta_dp: float | None = None,
     note: str = "",
 ) -> CaseResult:
     """예측 도달일과 실제 세정일의 오차(일)를 계산한다.
@@ -102,6 +106,7 @@ def build_case(
         error_days=error,
         fi_at_cutoff=fi_at_cutoff,
         fi_at_actual=fi_at_actual,
+        predicted_delta_dp=predicted_delta_dp,
         trend_status=trend_status,
         note=note,
     )

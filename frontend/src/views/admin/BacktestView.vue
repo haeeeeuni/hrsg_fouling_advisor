@@ -12,7 +12,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { useJobPolling } from '@/composables/useJobPolling'
 import { useToast } from '@/composables/useToast'
 import { useUnitsStore } from '@/stores/units'
-import { formatDate, formatDateTime, formatFi, formatPercent } from '@/utils/format'
+import { formatDate, formatDateTime, formatDp, formatFi, formatPercent } from '@/utils/format'
 
 const units = useUnitsStore()
 const toast = useToast()
@@ -205,6 +205,7 @@ watch(selectedUnitId, load)
               <th scope="col">예측 도달일</th>
               <th scope="col" class="text-end">오차(일)</th>
               <th scope="col" class="text-end">실제 세정 시 FI</th>
+              <th scope="col" class="text-end">예측 Δ차압</th>
               <th scope="col">비고</th>
             </tr>
           </thead>
@@ -218,6 +219,7 @@ watch(selectedUnitId, load)
                 {{ item.error_days ?? '-' }}
               </td>
               <td class="text-end">{{ formatFi(item.fi_at_actual) }}</td>
+              <td class="text-end">{{ formatDp(item.predicted_delta_dp) }}</td>
               <td class="small text-muted">{{ item.note }}</td>
             </tr>
           </tbody>
