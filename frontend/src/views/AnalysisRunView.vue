@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import * as unitsApi from '@/api/units'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useJobPolling } from '@/composables/useJobPolling'
 import { useToast } from '@/composables/useToast'
@@ -19,6 +20,8 @@ const busy = ref(false)
 const error = ref(null)
 const periodStart = ref('')
 const periodEnd = ref('')
+// 이 호기에 실제로 적재된 기간. 기본값과 안내 문구에 쓴다.
+const dataPeriod = ref(null)
 const thresholdOverride = ref(null)
 
 // 편익 파라미터 임시 변경 (specs/09 §3.2, specs/11 §8.2)
@@ -40,12 +43,7 @@ const canRun = computed(
 
 onMounted(async () => {
   await units.fetchUnits()
-  // 기본값: 최근 12개월 (specs/04 §3)
-  const end = new Date()
-  const start = new Date(end)
-  start.setMonth(start.getMonth() - 12)
-  periodEnd.value = end.toISOString().slice(0, 10)
-  periodStart.value = start.toISOString().slice(0, 10)
+  await applyDefaultRange()
 
   // 페이지를 이탈했다 돌아와도 진행 상태가 복원된다 (AC-16-4)
   const resumed = job.resume()
@@ -56,12 +54,53 @@ onMounted(async () => {
   }
 })
 
-function applyQuickRange(months) {
+/**
+ * 기본 분석 기간.
+ *
+ * "최근 12개월"(specs/04 §3)을 오늘 기준으로 잡으면, 적재된 데이터가 과거에만 있는 경우
+ * 겹치는 구간이 없어 INSUFFICIENT_DATA 로 실패한다. 사용자는 이유를 알 수 없다.
+ * 그래서 적재 기간을 먼저 읽고, 그 안에서 최근 12개월을 고른다.
+ */
+async function applyDefaultRange() {
+  dataPeriod.value = null
+  if (!units.selectedUnitId) return
+
+  try {
+    const { data } = await unitsApi.fetchDataSummary(units.selectedUnitId)
+    const { start, end } = data?.period ?? {}
+    if (start && end) {
+      dataPeriod.value = { start: start.slice(0, 10), end: end.slice(0, 10) }
+      const last = new Date(end)
+      const from = new Date(last)
+      from.setMonth(from.getMonth() - 12)
+      const first = new Date(start)
+      periodEnd.value = last.toISOString().slice(0, 10)
+      periodStart.value = (from < first ? first : from).toISOString().slice(0, 10)
+      return
+    }
+  } catch {
+    // 요약을 못 읽어도 화면은 떠야 한다. 아래 기본값으로 떨어진다.
+  }
+
   const end = new Date()
   const start = new Date(end)
-  start.setMonth(start.getMonth() - months)
+  start.setMonth(start.getMonth() - 12)
   periodEnd.value = end.toISOString().slice(0, 10)
   periodStart.value = start.toISOString().slice(0, 10)
+}
+
+// 호기를 바꾸면 그 호기의 적재 기간으로 다시 잡는다.
+watch(() => units.selectedUnitId, applyDefaultRange)
+
+function applyQuickRange(months) {
+  // 데이터가 있는 마지막 날을 기준으로 거슬러 올라간다. 오늘 기준이면
+  // 과거 데이터만 있는 호기에서 빈 구간이 선택된다.
+  const end = dataPeriod.value ? new Date(dataPeriod.value.end) : new Date()
+  const start = new Date(end)
+  start.setMonth(start.getMonth() - months)
+  const first = dataPeriod.value ? new Date(dataPeriod.value.start) : null
+  periodEnd.value = end.toISOString().slice(0, 10)
+  periodStart.value = (first && start < first ? first : start).toISOString().slice(0, 10)
 }
 
 async function run() {
@@ -128,13 +167,23 @@ async function run() {
           </div>
           <div class="col-6 col-lg-4">
             <label for="periodStart" class="form-label">분석 시작일</label>
-            <input id="periodStart" v-model="periodStart" type="date" class="form-control" :disabled="busy" />
+            <input id="periodStart" v-model="periodStart" type="date" class="form-control"
+                   :min="dataPeriod?.start" :max="dataPeriod?.end" :disabled="busy" />
           </div>
           <div class="col-6 col-lg-4">
             <label for="periodEnd" class="form-label">분석 종료일</label>
-            <input id="periodEnd" v-model="periodEnd" type="date" class="form-control" :disabled="busy" />
+            <input id="periodEnd" v-model="periodEnd" type="date" class="form-control"
+                   :min="dataPeriod?.start" :max="dataPeriod?.end" :disabled="busy" />
           </div>
         </div>
+
+        <!-- 적재 기간을 알려주지 않으면, 기본값이 데이터 밖으로 잡혀도 사용자는 이유를 모른다. -->
+        <p v-if="dataPeriod" class="form-text mt-2 mb-0">
+          이 호기에 적재된 기간: <strong>{{ dataPeriod.start }} ~ {{ dataPeriod.end }}</strong>
+        </p>
+        <p v-else-if="units.selectedUnitId" class="form-text text-warning mt-2 mb-0">
+          적재된 운전 데이터가 없습니다. 먼저 데이터를 업로드하세요.
+        </p>
 
         <div class="btn-group btn-group-sm mt-3" role="group" aria-label="기간 빠른 선택">
           <button v-for="m in [1, 3, 6, 12]" :key="m" type="button"
