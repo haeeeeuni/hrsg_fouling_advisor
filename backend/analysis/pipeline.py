@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from django.db import transaction
+from django.db.models import Max, Min
 from django.utils import timezone
 
 from analysis.models import (
@@ -95,6 +96,57 @@ class PipelineContext:
     def report(self, percent: int, stage: str) -> None:
         if self.progress:
             self.progress(percent, stage)
+
+
+def release_stale_runs(unit: Unit, stale_minutes: int) -> int:
+    """응답이 끊긴 RUNNING 분석을 실패로 정리한다.
+
+    워커가 비정상 종료하면(OOM, 재배포, 강제 종료) 아무도 상태를 바꿔주지 못해
+    RUNNING 레코드가 영구히 남는다. 호기당 동시 1건 제약(specs/15 §13) 때문에
+    그 호기는 관리자가 수동으로 지우기 전까지 분석을 못 하게 된다.
+
+    분석 목표가 60초이므로(specs/18 §1) stale_minutes 는 넉넉히 잡는다.
+    돌고 있는 정상 작업을 잘못 끊지 않는 것이 중요하다.
+
+    반환값은 정리한 건수.
+    """
+    cutoff = timezone.now() - timedelta(minutes=int(stale_minutes))
+    stale = AnalysisRun.objects.filter(unit=unit, status=RunStatus.RUNNING, executed_at__lt=cutoff)
+    released = stale.update(
+        status=RunStatus.FAILED,
+        failed_stage="",
+        error_message=(
+            "[WORKER_LOST] 실행 중이던 작업이 응답하지 않아 실패로 정리했습니다. "
+            "워커가 비정상 종료했을 수 있습니다. 다시 실행해 주세요."
+        ),
+    )
+    if released:
+        logger.warning(
+            "released stale analysis runs unit=%s count=%s after=%smin",
+            unit.code,
+            released,
+            stale_minutes,
+        )
+    return released
+
+
+def _no_data_message(unit: Unit) -> str:
+    """선택 기간에 데이터가 없을 때, 이 호기가 실제로 가진 기간을 알려준다."""
+    bounds = Measurement.objects.filter(unit=unit).aggregate(
+        first=Min("timestamp"), last=Max("timestamp")
+    )
+    first, last = bounds["first"], bounds["last"]
+    if first is None:
+        return (
+            f"{unit.code} 호기에 적재된 운전 데이터가 없습니다. " "데이터 업로드를 먼저 진행하세요."
+        )
+    tz = timezone.get_current_timezone()
+    return (
+        "선택한 기간에 데이터가 없습니다. "
+        f"{unit.code} 호기의 데이터는 "
+        f"{first.astimezone(tz):%Y-%m-%d} ~ {last.astimezone(tz):%Y-%m-%d} "
+        "기간으로 구성되어 있습니다."
+    )
 
 
 def load_measurements(unit: Unit, start, end, cutoff=None) -> pd.DataFrame:
@@ -188,7 +240,9 @@ def run_analysis(
     ctx.report(5, STAGE_LOAD)
     frame = load_measurements(unit, run.period_start, run.period_end, ctx.cutoff)
     if frame.empty:
-        raise PipelineError(STAGE_LOAD, "INSUFFICIENT_DATA", "선택 기간에 데이터가 없습니다.")
+        # 기간만 어긋난 경우가 대부분이다. 적재 기간을 함께 알려주지 않으면
+        # 사용자는 무엇을 고쳐야 하는지 알 수 없다.
+        raise PipelineError(STAGE_LOAD, "INSUFFICIENT_DATA", _no_data_message(unit))
 
     # --- 정제 ---
     ctx.report(15, STAGE_CLEAN)

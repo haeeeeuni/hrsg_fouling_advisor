@@ -131,11 +131,18 @@ UnitSetting            # 호기별 오버라이드
 | `backtest_lookahead_days` | `[30, 60, 90]` |
 | `backtest_hit_window_days` | 30 |
 | `auto_recalc_rolling_months` | 12 |
+| `analysis_stale_minutes` | 30 |
 
 > **추가 근거(2026-09-21, Phase 7):** `19-optional-features.md` 의 우선순위 가중치(§3.3), 백테스트 컷오프 지점과
 > ±30일 적중 판정 폭(§2.2), 자동 재계산 기본 창(§1.2)은 모두 튜닝 가능한 값이므로 설정으로 옮겼다(AGENTS.md §1.2).
 > `priority_weights` 는 네 항목이 한 덩어리로만 의미가 있어 JSON 한 건으로 두고, 합이 1인지 검증한다
 > (`units/settings_validation.py` 의 `check_json_weights`).
+
+> **추가 근거(2026-09-21):** `analysis_stale_minutes` — 워커가 비정상 종료하면
+> `AnalysisRun` 이 `RUNNING` 으로 남고, 호기당 동시 1건 제약(`15-api.md` §13) 때문에
+> 그 호기는 관리자가 수동으로 지우기 전까지 분석을 못 한다. 이 시간을 넘긴 `RUNNING` 은
+> 죽은 것으로 보고 실패 처리한다. 분석 목표가 60초이므로(`18-nonfunctional.md` §1)
+> 정상 작업을 잘못 끊지 않도록 넉넉히 잡는다.
 
 > **추가 근거(2026-09-20, Phase 1):** `01-auth-and-users.md` §3.2의 로그인 잠금 규칙("실패 5회 연속 시 5분 차단")은
 > 튜닝 가능한 임계값이므로 코드에 고정하지 않고 설정값으로 옮겼다(AGENTS.md §1.2).

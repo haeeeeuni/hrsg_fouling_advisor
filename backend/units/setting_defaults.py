@@ -729,6 +729,20 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         min_value=1,
         max_value=120,
     ),
+    SettingDef(
+        "analysis_stale_minutes",
+        30,
+        TYPE_INT,
+        CAT_SYSTEM,
+        "분석 중단 판정 시간",
+        description=(
+            "이 시간을 넘긴 RUNNING 분석은 워커가 죽은 것으로 보고 실패 처리한다. "
+            "분석 목표는 60초이므로(specs/18 §1) 넉넉히 잡는다."
+        ),
+        unit_label="분",
+        min_value=1,
+        max_value=1440,
+    ),
     # --- Phase 3: FOULING — specs/07, specs/13 §4.2 ---
     SettingDef(
         "fouling_threshold",

@@ -17,7 +17,7 @@ from analysis.models import (
     FoulingIndexPoint,
     RunStatus,
 )
-from analysis.pipeline import build_config, recalculate_benefit_for_run
+from analysis.pipeline import build_config, recalculate_benefit_for_run, release_stale_runs
 from analysis.serializers import (
     AnalysisRunListSerializer,
     AnalysisRunRequestSerializer,
@@ -77,6 +77,11 @@ class AnalysisRunViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet
         if unit is None:
             raise NotFound(message="호기를 찾을 수 없습니다.")
 
+        # 워커가 죽어 RUNNING 으로 남은 레코드를 먼저 정리한다.
+        # 그대로 두면 아래 동시 실행 제약에 걸려 그 호기는 영영 분석을 못 한다.
+        config = build_config(unit)
+        release_stale_runs(unit, config["analysis_stale_minutes"])
+
         # 호기당 동시 1건 (specs/15 §13)
         if AnalysisRun.objects.filter(unit=unit, status=RunStatus.RUNNING).exists():
             raise Conflict(
@@ -93,7 +98,7 @@ class AnalysisRunViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet
             period_end=data["period_end"],
             status=RunStatus.RUNNING,
             # 적용된 설정값 전체를 스냅샷으로 남긴다 — 재현성의 핵심 (AC-14-3)
-            settings_snapshot=build_config(unit, overrides),
+            settings_snapshot={**config, **overrides},
             benefit_params_snapshot=benefit_overrides,
         )
 

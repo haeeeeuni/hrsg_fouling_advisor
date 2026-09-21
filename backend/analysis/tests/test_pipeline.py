@@ -457,3 +457,101 @@ def test_recalculate_reuses_operating_context(api, normal_user, unit_with_foulin
     # 파라미터를 그대로 두고 재계산하면 값이 변하지 않아야 한다.
     assert after.data["daily_loss_cost"] == pytest.approx(before["daily_loss_cost"])
     assert after.data["power_loss_st_mw"] == pytest.approx(before["power_loss_st_mw"])
+
+
+# --- 고아 RUNNING 정리 / 기간 오류 안내 ---
+
+
+def test_no_data_error_reports_the_units_actual_period(api, normal_user, unit_with_fouling):
+    """기간만 어긋난 경우가 대부분이라, 적재 기간을 알려주지 않으면 고칠 수 없다."""
+    api.force_authenticate(normal_user)
+    res = api.post(
+        ANALYSIS_URL,
+        {
+            "unit_id": unit_with_fouling.id,
+            "period_start": "2030-01-01T00:00:00+09:00",
+            "period_end": "2030-06-01T00:00:00+09:00",
+        },
+        format="json",
+    )
+    run = AnalysisRun.objects.get(pk=res.data["analysis_run_id"])
+
+    assert run.status == RunStatus.FAILED
+    assert "INSUFFICIENT_DATA" in run.error_message
+    # 이 호기의 실제 기간(2024년)이 메시지에 들어 있어야 한다.
+    assert "2024" in run.error_message
+    assert unit_with_fouling.code in run.error_message
+
+
+def test_no_data_error_when_unit_has_nothing_loaded(api, normal_user, unit, seeded):
+    api.force_authenticate(normal_user)
+    res = api.post(
+        ANALYSIS_URL,
+        {
+            "unit_id": unit.id,
+            "period_start": "2024-01-01T00:00:00+09:00",
+            "period_end": "2024-06-01T00:00:00+09:00",
+        },
+        format="json",
+    )
+    run = AnalysisRun.objects.get(pk=res.data["analysis_run_id"])
+
+    assert "적재된 운전 데이터가 없습니다" in run.error_message
+
+
+def test_stale_running_run_is_released(unit, seeded):
+    """워커가 죽으면 RUNNING 이 남아 그 호기가 영영 분석을 못 하게 된다."""
+    from datetime import timedelta
+
+    from analysis.pipeline import release_stale_runs
+
+    run = AnalysisRun.objects.create(
+        unit=unit,
+        period_start=timezone.now(),
+        period_end=timezone.now(),
+        status=RunStatus.RUNNING,
+    )
+    # executed_at 은 auto_now_add 라 생성 후에 밀어 준다.
+    AnalysisRun.objects.filter(pk=run.pk).update(executed_at=timezone.now() - timedelta(minutes=45))
+
+    released = release_stale_runs(unit, stale_minutes=30)
+
+    run.refresh_from_db()
+    assert released == 1
+    assert run.status == RunStatus.FAILED
+    assert "WORKER_LOST" in run.error_message
+
+
+def test_running_run_within_threshold_is_kept(unit, seeded):
+    """돌고 있는 정상 작업을 끊으면 안 된다."""
+    from analysis.pipeline import release_stale_runs
+
+    run = AnalysisRun.objects.create(
+        unit=unit,
+        period_start=timezone.now(),
+        period_end=timezone.now(),
+        status=RunStatus.RUNNING,
+    )
+
+    assert release_stale_runs(unit, stale_minutes=30) == 0
+    run.refresh_from_db()
+    assert run.status == RunStatus.RUNNING
+
+
+def test_stale_run_no_longer_blocks_new_analysis(api, normal_user, unit_with_fouling):
+    """정리 로직이 뷰에 연결되어 409 가 풀리는지 — 사용자가 겪는 증상."""
+    from datetime import timedelta
+
+    stale = AnalysisRun.objects.create(
+        unit=unit_with_fouling,
+        period_start=timezone.now(),
+        period_end=timezone.now(),
+        status=RunStatus.RUNNING,
+    )
+    AnalysisRun.objects.filter(pk=stale.pk).update(executed_at=timezone.now() - timedelta(hours=2))
+
+    res = start_analysis(api, normal_user, unit_with_fouling)
+
+    assert res.status_code == 202
+    stale.refresh_from_db()
+    assert stale.status == RunStatus.FAILED
