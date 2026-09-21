@@ -85,6 +85,18 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "role_label", "last_login_at", "created_at"]
 
+    def to_internal_value(self, data):
+        """사번을 필드 검증 **전에** 대문자로 맞춘다.
+
+        모델의 정규식(영문 대문자+숫자, specs/01 §7)이 validate_employee_no 보다
+        먼저 돌기 때문에, 여기서 올리지 않으면 소문자 입력이 형식 오류로 막힌다.
+        로그인은 소문자를 받아주므로(LoginSerializer) 생성도 같게 맞춘다.
+        """
+        raw = data.get("employee_no")
+        if isinstance(raw, str):
+            data = {**data, "employee_no": raw.strip().upper()}
+        return super().to_internal_value(data)
+
     def validate_employee_no(self, value: str) -> str:
         value = value.strip().upper()
         # 사번은 변경 불가 (specs/01 §5)

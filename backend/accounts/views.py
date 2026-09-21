@@ -8,6 +8,7 @@ import logging
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -37,11 +38,13 @@ class CsrfView(APIView):
         return Response({"csrf_token": get_token(request._request)})
 
 
+# 오류 리포트에 비밀번호가 찍히지 않게 한다 (AGENTS.md §7).
+# DRF 의 Request 는 HttpRequest 가 아니라 post() 에 직접 걸면 TypeError 가 난다.
+@method_decorator(sensitive_post_parameters("password"), name="dispatch")
 class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_scope = "login"  # specs/15 §13 — IP 기준 분당 10회
 
-    @sensitive_post_parameters("password")
     def post(self, request: Request) -> Response:
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -108,10 +111,10 @@ class MeView(APIView):
         return Response(MeSerializer(request.user).data)
 
 
+@method_decorator(sensitive_post_parameters("current_password", "new_password"), name="dispatch")
 class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @sensitive_post_parameters("current_password", "new_password")
     def post(self, request: Request) -> Response:
         serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

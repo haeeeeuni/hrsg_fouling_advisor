@@ -20,4 +20,11 @@ class IsAdminRole(BasePermission):
 
     def has_permission(self, request: Request, view: Any) -> bool:
         user = request.user
-        return bool(user and user.is_authenticated and getattr(user, "is_admin_role", False))
+        # is_authenticated 는 비활성 사용자에게도 True 다. 세션 복원 단계에서도
+        # 걸러지지만, 권한 판정에서 한 번 더 막는다(비활성화 직후 살아 있는 세션 차단).
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and getattr(user, "is_admin_role", False)
+        )

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -35,7 +35,9 @@ from common.exceptions import Conflict, NotFound
 from units.models import Unit
 
 
-class AnalysisRunViewSet(viewsets.ReadOnlyModelViewSet):
+class AnalysisRunViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
+    # ReadOnlyModelViewSet 만으로는 DELETE 가 405 다. 삭제는 관리자 전용
+    # (get_permissions 참조, specs/15 §6, AGENTS.md §6).
     queryset = AnalysisRun.objects.select_related(
         "unit", "executed_by", "model_version_dp", "model_version_st"
     )

@@ -9,11 +9,13 @@ urlpatterns = [
     path("api/", include("accounts.urls_admin")),
     path("api/", include("common.urls_audit")),
     path("api/", include("common.urls")),
-    # analysis 를 units 보다 먼저 둔다 — /api/units/comparison/ 이
-    # units 라우터의 상세 경로(/api/units/{pk}/)에 먼저 잡히는 것을 막는다.
+    # 고정 경로를 먼저 둔다. 라우터의 상세 경로(/{pk}/)는 [^/.]+ 를 잡으므로
+    # 순서를 바꾸면 리터럴 경로가 pk 로 먹힌다.
+    #   analysis → units   : /api/units/comparison/
+    #   maintenance → ingestion: /api/uploads/maintenance/
     path("api/", include("analysis.urls")),
     path("api/", include("units.urls")),
-    path("api/", include("ingestion.urls")),
     path("api/", include("maintenance.urls")),
+    path("api/", include("ingestion.urls")),
     path("api/", include("reports.urls")),
 ]

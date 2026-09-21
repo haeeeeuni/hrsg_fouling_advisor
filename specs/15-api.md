@@ -141,6 +141,11 @@ POST  /api/jobs/{job_id}/cancel/  → 202
 | GET | `/analysis-runs/{id}/benefit/` | 편익 결과 |
 | GET | `/analysis-runs/{id}/data-quality/` | 정제 요약 |
 | POST | `/analysis-runs/{id}/recalculate-benefit/` | 편익 파라미터만 변경해 재계산(분석 재실행 없이) |
+| DELETE | `/analysis-runs/{id}/` | 분석 실행 이력 삭제 (**관리자 전용**) |
+
+**보완(2026-09-21):** DELETE 행이 빠져 있었다. `AGENTS.md` §6 은 파괴적 작업에 DELETE 를 쓰고
+서버에서 관리자 권한을 재확인하도록 요구하고, `13-admin.md` §6 의 실행 이력 관리 화면도 삭제를 전제한다.
+구현과 테스트(`test_only_admin_can_delete_run`)가 이미 이 동작을 기대하고 있어 표에 명시한다.
 | DELETE | `/analysis-runs/{id}/` | 관리자 |
 
 ### 분석 실행 요청 body

@@ -19,6 +19,27 @@ from reports.pdf.fonts import font_properties, register_matplotlib  # noqa: E402
 GRADE_BANDS = ((0, 30, "#198754"), (30, 60, "#ffc107"), (60, 100, "#dc3545"))
 
 
+def _as_dates(values) -> list:
+    """문자열·datetime·date 가 섞여 들어와도 date 로 맞춘다.
+
+    matplotlib 는 첫 plot 의 타입으로 축 단위를 굳힌다. 시계열을 문자열로 그린 뒤
+    세정 마커를 date 로 넘기면 ConversionError 가 난다.
+    """
+    from datetime import date, datetime
+
+    out = []
+    for value in values or []:
+        if isinstance(value, datetime):
+            out.append(value.date())
+        elif isinstance(value, date):
+            out.append(value)
+        elif isinstance(value, str):
+            out.append(datetime.fromisoformat(value[:10]).date())
+        else:
+            out.append(value)
+    return out
+
+
 def _finish(fig) -> bytes:
     buffer = io.BytesIO()
     fig.tight_layout()
@@ -46,7 +67,7 @@ def fouling_trend(
     register_matplotlib()
     fp = font_properties()
 
-    dates = [p["date"] for p in points]
+    dates = _as_dates([p["date"] for p in points])
     values = [p.get("fi_value") for p in points]
 
     fig, ax = plt.subplots(figsize=(9, 3.2))
@@ -58,7 +79,7 @@ def fouling_trend(
         threshold, color="#dc3545", linestyle="--", linewidth=1, label=f"임계치 {threshold:g}"
     )
 
-    for index, cleaned_at in enumerate(cleaning_dates or []):
+    for index, cleaned_at in enumerate(_as_dates(cleaning_dates)):
         ax.axvline(
             cleaned_at,
             color="#198754",

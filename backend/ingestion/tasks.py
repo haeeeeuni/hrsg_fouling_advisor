@@ -90,6 +90,14 @@ def validate_upload(self, batch_id: int) -> dict:
         raise
 
 
+def _aware(value):
+    """분석 구간은 KST naive 로 다루지만 DB 저장은 aware 여야 한다 (AGENTS.md §4)."""
+    if not value:
+        return None
+    stamp = pd.Timestamp(value).to_pydatetime()
+    return timezone.make_aware(stamp) if timezone.is_naive(stamp) else stamp
+
+
 def _save_validation(batch: UploadBatch, report: dict, encoding: str, delimiter: str) -> None:
     report["encoding"] = encoding
     report["delimiter"] = delimiter
@@ -98,10 +106,8 @@ def _save_validation(batch: UploadBatch, report: dict, encoding: str, delimiter:
     batch.row_total = report.get("row_total", 0)
     batch.row_skipped = report.get("row_dropped", 0)
     batch.row_duplicated = report.get("row_duplicated", 0)
-    batch.period_start = (
-        pd.Timestamp(period["start"]).to_pydatetime() if period.get("start") else None
-    )
-    batch.period_end = pd.Timestamp(period["end"]).to_pydatetime() if period.get("end") else None
+    batch.period_start = _aware(period.get("start"))
+    batch.period_end = _aware(period.get("end"))
     batch.status = BatchStatus.VALIDATED if report.get("is_loadable") else BatchStatus.FAILED
     batch.save(
         update_fields=[
@@ -226,10 +232,12 @@ def _bulk_insert(unit, batch: UploadBatch, frame: pd.DataFrame, duplicate_policy
         return len(created)
 
     # 기본: 건너뛰기. 기존 행을 덮어쓰지 않는다.
-    created = Measurement.objects.bulk_create(
-        objects, batch_size=BULK_BATCH_SIZE, ignore_conflicts=True
-    )
-    return sum(1 for obj in created if obj.pk is not None)
+    # PostgreSQL 에서 ignore_conflicts=True 를 쓰면 Django 가 PK 를 채워주지 않으므로
+    # 반환 객체의 pk 로는 적재 건수를 셀 수 없다(항상 0 이 된다).
+    # 실제 증가분을 앞뒤 카운트 차이로 구한다.
+    before = Measurement.objects.filter(unit=unit).count()
+    Measurement.objects.bulk_create(objects, batch_size=BULK_BATCH_SIZE, ignore_conflicts=True)
+    return Measurement.objects.filter(unit=unit).count() - before
 
 
 def _trigger_auto_recalc(unit_id: int) -> str | None:

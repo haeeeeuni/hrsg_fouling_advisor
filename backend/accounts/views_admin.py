@@ -94,7 +94,9 @@ class UserViewSet(AuditedModelMixin, viewsets.ModelViewSet):
 
         hard = request.query_params.get("hard", "").lower() in {"1", "true", "yes"}
         if hard:
-            if instance.analysis_runs.exists():
+            # analysis_runs 는 Unit 쪽 related_name 이다.
+            # 사용자가 실행한 분석의 역참조는 기본 이름인 analysisrun_set.
+            if instance.analysisrun_set.exists():
                 raise Conflict(
                     code="USER_HAS_HISTORY",
                     message=(

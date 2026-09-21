@@ -36,10 +36,15 @@ def snapshot(instance: Any, fields: list[str] | None = None) -> dict[str, Any]:
     if instance is None:
         return {}
 
-    names = fields or [f.name for f in instance._meta.fields]
+    meta_fields = {f.name: f for f in instance._meta.fields}
+    names = fields or list(meta_fields)
     out: dict[str, Any] = {}
     for name in names:
         if name in SENSITIVE_FIELDS:
+            continue
+        # auto_now 필드는 저장할 때마다 바뀌어 변경 목록을 오염시킨다.
+        # 누가 언제 바꿨는지는 AuditLog 자체의 actor/created_at 이 이미 가지고 있다.
+        if getattr(meta_fields.get(name), "auto_now", False):
             continue
         try:
             value = getattr(instance, name)
