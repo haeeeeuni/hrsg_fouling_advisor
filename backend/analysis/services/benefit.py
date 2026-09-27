@@ -151,8 +151,15 @@ def daily_fuel_loss(
 
 
 def cleaning_costs(params: dict[str, Any], rated_total_mw: float) -> tuple[float, float, float]:
-    """세정 비용 + 정지 손실. outage_days=0 이면 운전 중 세정이라 정지 손실은 0."""
+    """세정 비용 + 정지 손실. outage_days=0 이면 운전 중 세정이라 정지 손실은 0.
+
+    정지 손실은 매출이 아니라 **마진**으로 계산한다(specs/09 §4.4 정정).
+    정지 중에는 연료를 때지 않으므로 연료비만큼은 손실이 아니다.
+    오염으로 인한 출력 저하는 연료를 그대로 쓰면서 매출만 잃으므로 매출 전액이 손실이고,
+    둘의 경제적 성격이 다르다. 같은 단가를 양쪽에 쓰면 정지 손실이 과대 계상된다.
+    """
     outage_days = float(params["outage_days"])
+    margin_ratio = max(0.0, 1.0 - float(params["fuel_cost_ratio"]))
     outage_loss = (
         rated_total_mw
         * 24
@@ -160,6 +167,7 @@ def cleaning_costs(params: dict[str, Any], rated_total_mw: float) -> tuple[float
         * outage_days
         * 1000
         * params["electricity_price"]
+        * margin_ratio
     )
     cost = float(params["cleaning_cost"])
     return cost, float(outage_loss), float(cost + outage_loss)

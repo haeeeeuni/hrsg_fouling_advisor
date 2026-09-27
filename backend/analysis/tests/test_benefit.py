@@ -259,3 +259,38 @@ def test_sensitivity_can_be_skipped():
     result = bf.compute(params=config(), with_sensitivity=False, **BASE)
 
     assert result.sensitivity == []
+
+
+# --- specs/09 §4.4 정정: 정지 손실은 마진 기준 ---
+
+
+def test_outage_loss_uses_margin_not_revenue():
+    """정지 중에는 연료를 때지 않으므로 연료비만큼은 손실이 아니다."""
+    result = compute(config(fuel_cost_ratio=0.65))
+
+    # 270MW(160+80=240) × 24 × 0.85 × 2일 × 1000 × 120 × (1 − 0.65)
+    expected = 240 * 24 * 0.85 * 2 * 1000 * 120 * 0.35
+    assert result.outage_loss == pytest.approx(expected, rel=1e-6)
+
+
+def test_higher_fuel_cost_ratio_lowers_outage_loss():
+    """연료비 비중이 클수록 정지로 아끼는 몫이 커져 손실이 준다."""
+    cheap_fuel = compute(config(fuel_cost_ratio=0.2)).outage_loss
+    dear_fuel = compute(config(fuel_cost_ratio=0.8)).outage_loss
+
+    assert dear_fuel < cheap_fuel
+    assert dear_fuel == pytest.approx(cheap_fuel * (0.2 / 0.8), rel=1e-6)
+
+
+def test_fuel_cost_ratio_does_not_touch_fouling_loss():
+    """오염 손실은 연료를 그대로 쓰면서 매출만 잃으므로 매출 전액이 맞다."""
+    a = compute(config(fuel_cost_ratio=0.2))
+    b = compute(config(fuel_cost_ratio=0.8))
+
+    assert a.daily_loss_cost == pytest.approx(b.daily_loss_cost)
+
+
+def test_online_cleaning_has_no_outage_loss_regardless_of_fuel_ratio():
+    result = compute(config(outage_days=0, fuel_cost_ratio=0.65))
+
+    assert result.outage_loss == 0

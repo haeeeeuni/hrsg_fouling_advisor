@@ -599,6 +599,20 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         "capacity_factor", 0.85, TYPE_FLOAT, CAT_BENEFIT, "이용률", min_value=0, max_value=1
     ),
     SettingDef(
+        "fuel_cost_ratio",
+        0.65,
+        TYPE_FLOAT,
+        CAT_BENEFIT,
+        "전력단가 중 연료비 비중",
+        description=(
+            "세정 정지 손실을 매출이 아니라 마진(매출 − 연료비)으로 계산한다(specs/09 §4.4). "
+            "정지 중에는 연료를 때지 않으므로 연료비만큼은 손실이 아니다. "
+            "기본 0.65 는 시드값이며 사업소 실적으로 대체한다."
+        ),
+        min_value=0,
+        max_value=0.95,
+    ),
+    SettingDef(
         "cleaning_recovery_ratio",
         0.9,
         TYPE_FLOAT,

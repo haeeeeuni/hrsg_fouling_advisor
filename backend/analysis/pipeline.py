@@ -68,6 +68,7 @@ BENEFIT_KEYS: tuple[str, ...] = (
     "heat_rate_penalty_coeff",
     "operating_hours_per_day",
     "capacity_factor",
+    "fuel_cost_ratio",
     "cleaning_recovery_ratio",
     "evaluation_horizon_days",
     "discount_rate_annual",

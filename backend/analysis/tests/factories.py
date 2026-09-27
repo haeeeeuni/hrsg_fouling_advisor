@@ -88,6 +88,7 @@ DEFAULT_CONFIG: dict = {
     "heat_rate_penalty_coeff": 0.30,
     "operating_hours_per_day": 20,
     "capacity_factor": 0.85,
+    "fuel_cost_ratio": 0.65,
     "cleaning_recovery_ratio": 0.9,
     "evaluation_horizon_days": 365,
     "discount_rate_annual": 0.0,

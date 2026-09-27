@@ -30,6 +30,7 @@
 | `heat_rate_penalty_coeff` | 차압 1 kPa 상승당 열소비율 악화 | 0.30 | % / kPa |
 | `operating_hours_per_day` | 일 평균 운전시간 | 20 | h/일 |
 | `capacity_factor` | 이용률 | 0.85 | – |
+| `fuel_cost_ratio` | 전력단가 중 연료비 비중 | 0.65 | – |
 | `cleaning_recovery_ratio` | 세정 후 회복률(완전 회복 = 1.0) | 0.9 | – |
 | `evaluation_horizon_days` | 편익 평가 기간 | 365 | 일 |
 | `discount_rate_annual` | 할인율(선택, NPV 계산용) | 0.0 | – |
@@ -74,10 +75,33 @@ daily_fuel_loss       = daily_fuel_cost_base × heat_rate_penalty_pct / 100     
 
 ### 4.4 세정 비용
 ```
-outage_loss = rated_total_power_mw × 24 × capacity_factor × outage_days × 1000 × electricity_price
+outage_margin_ratio = 1 − fuel_cost_ratio
+outage_loss = rated_total_power_mw × 24 × capacity_factor × outage_days × 1000
+              × electricity_price × outage_margin_ratio                          [원]
 total_cleaning_cost = cleaning_cost + outage_loss                                [원]
 ```
 - `outage_days = 0`(운전 중 세정, on-line cleaning)이면 정지 손실은 0.
+
+> **정정(2026-09-28): 정지 손실은 매출이 아니라 마진으로 계산한다.**
+>
+> 원안은 정지 기간의 **매출 전액**(`× electricity_price`)을 손실로 잡았다. 그러면
+> 오염 손실과 정지 손실의 경제적 성격이 어긋난다.
+>
+> | | 연료 소비 | 실제 손실 |
+> |---|---|---|
+> | 오염으로 인한 출력 저하 | 그대로(오히려 증가, §2 열소비율 악화) | **매출 전액** |
+> | 세정 정지 | 없음 | **마진 = 매출 − 연료비** |
+>
+> 정지 중에는 연료를 때지 않으므로 연료비만큼은 손실이 아니다. 같은 `electricity_price` 를
+> 양쪽에 그대로 쓰면 정지 손실이 과대 계상된다.
+>
+> 실측 영향(샘플 2호기, 270MW): 정지 손실 13.2억 → 4.6억. 이 차이 때문에 원안에서는
+> 오염도 88(경고)에서도 순편익이 −7.7억으로 나와, **어떤 오염 수준에서도 세정이 손해**라는
+> 결론만 나왔다. 의사결정 도구로서 성립하지 않는다.
+>
+> `fuel_cost_ratio` 기본값 0.65 는 **시드값일 뿐이며 사업소 실적으로 대체해야 한다.**
+> LNG 복합화력은 연료비가 변동비의 대부분을 차지하고 연료가·SMP 에 따라 크게 움직인다.
+> 정지를 계획 예방정비 기간에 수행해 추가 손실이 없다면 `outage_days = 0` 으로 둔다.
 
 ### 4.5 세정 회수 편익
 ```
@@ -122,6 +146,12 @@ ROI = net_benefit / total_cleaning_cost × 100                                  
 > `240 × 24 × 0.85 × 2 × 1000 × 120 = 1,175,040,000 원`이 되어 맞지 않는다. 역산하면 예시는 약 50 MW
 > 기준이다. 회수기간 48일도 `cleaning_recovery_ratio = 1.0`을 가정해야 나온다(기본값 0.9 적용 시 53일).
 > **구현은 4.4·4.5의 식을 정본으로 따랐다.** 예시 표의 수치는 설명용이며 서로 정합하지 않는다.
+>
+> **추가(2026-09-28):** 4.4 를 마진 기준으로 정정한 뒤 이 불일치가 크게 줄었다.
+> 예시의 `244,800,000 원` 을 역산하면 **연료비 비중 0.792** 가 나온다
+> (`240 × 24 × 0.85 × 2 × 1000 × 120 × (1 − 0.792) ≒ 244,800,000`).
+> 원안 작성자도 매출 전액이 아니라 마진을 염두에 뒀던 것으로 보인다.
+> 남은 차이(약 50 MW 로 역산되던 부분)는 이 해석으로 대부분 설명된다.
 
 ### 4.7 권고 세정 시점의 끝단 효과
 
