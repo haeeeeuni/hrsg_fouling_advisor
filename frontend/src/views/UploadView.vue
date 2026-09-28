@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import * as uploadsApi from '@/api/uploads'
 import FileDropzone from '@/components/upload/FileDropzone.vue'
+import NewUnitSetup from '@/components/upload/NewUnitSetup.vue'
 import ValidationReport from '@/components/upload/ValidationReport.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { useJobPolling } from '@/composables/useJobPolling'
@@ -12,6 +13,14 @@ import { formatCount, formatDateTime } from '@/utils/format'
 
 const units = useUnitsStore()
 const toast = useToast()
+
+/**
+ * 업로드는 두 갈래다 (specs/03 §2.1).
+ *  EXISTING : 매핑이 끝난 호기에 데이터를 덧붙인다 — 대부분의 경우
+ *  NEW      : 아직 매핑이 없는 호기. 등록·매핑을 먼저 해야 해서 안내가 필요하다
+ * 업로드 가능한 호기가 하나도 없으면 새 호기 쪽으로 시작한다.
+ */
+const mode = ref('EXISTING')
 
 const file = ref(null)
 const uploadPercent = ref(0)
@@ -32,6 +41,7 @@ const canCommit = computed(
 
 onMounted(async () => {
   await units.fetchUnits()
+  if (!units.uploadableUnits.length) mode.value = 'NEW'
   await loadHistory()
   const resumed = validateJob.resume()
   if (resumed) {
@@ -41,6 +51,12 @@ onMounted(async () => {
     busy.value = false
   }
 })
+
+async function useReadyUnit(unitId) {
+  units.selectUnit(unitId)
+  mode.value = 'EXISTING'
+  await loadHistory()
+}
 
 async function loadHistory() {
   if (!units.selectedUnitId) return
@@ -126,13 +142,56 @@ async function onCancel() {
 
 <template>
   <div>
-    <div v-if="!units.uploadableUnits.length" class="card">
+    <!-- 두 갈래 (specs/03 §2.1) -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          class="nav-link"
+          :class="{ active: mode === 'EXISTING' }"
+          :aria-selected="mode === 'EXISTING'"
+          role="tab"
+          :disabled="busy"
+          @click="mode = 'EXISTING'"
+        >
+          기존 호기에 데이터 추가
+          <span class="badge text-bg-secondary ms-1">{{ units.uploadableUnits.length }}</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          class="nav-link"
+          :class="{ active: mode === 'NEW' }"
+          :aria-selected="mode === 'NEW'"
+          role="tab"
+          :disabled="busy"
+          @click="mode = 'NEW'"
+        >
+          새 호기 데이터 올리기
+        </button>
+      </li>
+    </ul>
+
+    <NewUnitSetup
+      v-if="mode === 'NEW'"
+      :units="units.list"
+      @select-ready="useReadyUnit"
+    />
+
+    <div v-else-if="!units.uploadableUnits.length" class="card">
       <div class="card-body">
         <EmptyState
           title="업로드 가능한 호기가 없습니다."
-          description="관리자가 호기를 등록하고 컬럼 매핑을 완료해야 업로드할 수 있습니다."
+          description="호기를 등록하고 컬럼 매핑을 마쳐야 업로드할 수 있습니다. 위의 '새 호기 데이터 올리기' 를 눌러 남은 단계를 확인하세요."
           icon="bi-hdd-stack"
-        />
+        >
+          <template #action>
+            <button type="button" class="btn btn-primary btn-sm" @click="mode = 'NEW'">
+              남은 단계 보기
+            </button>
+          </template>
+        </EmptyState>
       </div>
     </div>
 
