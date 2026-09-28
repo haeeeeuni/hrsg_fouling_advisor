@@ -104,7 +104,7 @@ watch(
                 :disabled="exporting" @click="exportReport('xlsx')">엑셀 다운로드</button>
         <RouterLink v-if="analysis.hasResult" class="btn btn-outline-primary btn-sm me-1"
                     :to="{ name: 'comparison' }">세정 전후 비교</RouterLink>
-        <RouterLink class="btn btn-lime btn-sm" :to="{ name: 'analysis-run' }">분석 실행</RouterLink>
+        <RouterLink class="btn btn-accent btn-sm" :to="{ name: 'analysis-run' }">분석 실행</RouterLink>
       </div>
     </div>
 

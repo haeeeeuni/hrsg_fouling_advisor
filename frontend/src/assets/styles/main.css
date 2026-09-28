@@ -1,13 +1,8 @@
 /* Bootstrap 5 유틸리티를 우선 쓰고, 부득이한 전역 규칙만 여기에 둔다 (AGENTS.md §4). */
-/* 테마 토큰과 컴포넌트 스타일은 spark-theme.css 에 있다 (specs/20). */
+/* 테마 토큰과 컴포넌트 스타일은 adminhmd-theme.css 에 있다 (specs/20). */
 
 html,
 body,
 #app {
   height: 100%;
-}
-
-/* 최소 지원 폭 1280px (specs/11 §9) */
-.app-main {
-  min-width: 0;
 }

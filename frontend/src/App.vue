@@ -22,14 +22,14 @@ const showShell = computed(() => auth.isAuthenticated && route.name !== 'login')
   </div>
 
   <!--
-    Spark 레이아웃 (specs/20): 전체 높이 고정 사이드바(좌) + 메인 영역 상단 네비.
-    사이드바가 fixed 라서 메인이 .spark-main 의 margin-left 로 자리를 비운다.
+    셸 레이아웃 (specs/20): 전체 높이 고정 사이드바(좌) + 메인 영역 상단 네비.
+    사이드바가 fixed 라서 메인이 .ui-main 의 margin-left 로 자리를 비운다.
   -->
   <template v-else>
     <AppSidebar v-if="showShell" />
-    <div class="app-main" :class="showShell ? 'spark-main' : 'spark-main spark-main--bare'">
+    <div :class="showShell ? 'ui-main' : 'ui-main ui-main--bare'">
       <AppNavbar v-if="showShell" />
-      <main :class="showShell ? 'spark-content' : ''">
+      <main :class="showShell ? 'ui-content' : ''">
         <RouterView />
       </main>
     </div>

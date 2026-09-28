@@ -10,10 +10,10 @@ defineProps({
 </script>
 
 <template>
-  <div class="card h-100" :class="{ 'spark-card-dark': dark }">
+  <div class="card h-100" :class="{ 'ui-card-dark': dark }">
     <div class="card-body">
-      <p class="spark-stat-label">{{ label }}</p>
-      <p class="spark-stat-value" :class="variant ? `text-${variant}` : ''">
+      <p class="ui-stat-label">{{ label }}</p>
+      <p class="ui-stat-value" :class="variant ? `text-${variant}` : ''">
         <slot name="value">{{ value }}</slot>
       </p>
       <p v-if="hint || $slots.hint" class="small text-secondary mb-0">

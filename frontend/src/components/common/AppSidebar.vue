@@ -38,18 +38,18 @@ const sections = computed(() => {
 </script>
 
 <template>
-  <aside class="spark-sidebar">
-    <RouterLink class="spark-brand" :to="{ name: 'dashboard' }">
+  <aside class="ui-sidebar">
+    <RouterLink class="ui-brand" :to="{ name: 'dashboard' }">
       <i class="bi bi-fire" aria-hidden="true"></i>
       <span>HRSG 오염도 진단</span>
     </RouterLink>
 
     <nav class="flex-grow-1">
       <div v-for="section in sections" :key="section.title" class="mb-3">
-        <p class="spark-menu-title">{{ section.title }}</p>
+        <p class="ui-menu-title">{{ section.title }}</p>
         <ul class="list-unstyled m-0">
           <li v-for="item in section.items" :key="item.label">
-            <RouterLink class="spark-menu-link" :to="item.to" active-class="active">
+            <RouterLink class="ui-menu-link" :to="item.to" active-class="active">
               <i class="bi" :class="item.icon" aria-hidden="true"></i>
               <span>{{ item.label }}</span>
             </RouterLink>
@@ -58,8 +58,8 @@ const sections = computed(() => {
       </div>
     </nav>
 
-    <div class="spark-sidebar-footer">
-      <p class="spark-user-name mb-0">{{ auth.user?.full_name }}</p>
+    <div class="ui-sidebar-footer">
+      <p class="ui-user-name mb-0">{{ auth.user?.full_name }}</p>
       <p class="mb-0">{{ ROLE[auth.user?.role] ?? '' }} · {{ auth.user?.employee_no }}</p>
     </div>
   </aside>

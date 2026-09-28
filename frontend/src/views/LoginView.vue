@@ -30,7 +30,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="spark-auth">
+  <div class="ui-auth">
     <div class="card">
       <div class="card-body p-4">
         <h1 class="h5 mb-1">HRSG 오염도 진단</h1>

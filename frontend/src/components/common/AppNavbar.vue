@@ -27,15 +27,15 @@ async function onLogout() {
 </script>
 
 <template>
-  <header class="spark-navbar">
-    <h1 class="spark-page-title">{{ pageTitle }}</h1>
+  <header class="ui-navbar">
+    <h1 class="ui-page-title">{{ pageTitle }}</h1>
 
     <div class="ms-auto d-flex align-items-center gap-2">
       <div v-if="units.activeUnits.length">
         <label for="navUnit" class="visually-hidden">호기 선택</label>
         <select
           id="navUnit"
-          class="form-select form-select-sm spark-pill"
+          class="form-select form-select-sm ui-pill"
           :value="units.selectedUnitId"
           @change="units.selectUnit(Number($event.target.value))"
         >
@@ -49,7 +49,7 @@ async function onLogout() {
 
       <div class="dropdown">
         <button
-          class="btn btn-sm spark-pill dropdown-toggle"
+          class="btn btn-sm ui-pill dropdown-toggle"
           type="button"
           data-bs-toggle="dropdown"
           aria-expanded="false"
