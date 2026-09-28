@@ -327,6 +327,79 @@ select.ui-pill {
   color: #ffffff;
 }
 
+/* -------------------------------------------------- 설명(?) */
+
+.ui-help-wrap {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.ui-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: 50%;
+  background-color: var(--admin-surface);
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ui-help:hover,
+.ui-help[aria-expanded='true'] {
+  border-color: var(--admin-primary);
+  background-color: var(--admin-primary);
+  color: #ffffff;
+}
+
+.ui-help:focus-visible {
+  outline: none;
+  box-shadow: var(--admin-ring);
+}
+
+/* 어두운 카드 위에서는 반전시킨다. */
+.ui-card-dark .ui-help {
+  border-color: rgba(255, 255, 255, 0.3);
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.ui-help-pop {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1055;
+  width: 19rem;
+  max-width: 78vw;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  background-color: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+  color: var(--admin-text);
+  font-size: 0.79rem;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: normal;
+}
+
+/* 화면 오른쪽 끝 카드에서 잘리지 않게 한다. */
+.ui-help-pop--end {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 /* -------------------------------------------------- 표 */
 
 .table {

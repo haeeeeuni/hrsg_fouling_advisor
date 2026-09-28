@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from 'vue'
 
+import HelpHint from '@/components/common/HelpHint.vue'
+
 import { formatCount, formatPercent } from '@/utils/format'
 
 const props = defineProps({ quality: { type: Object, default: null } })
@@ -13,7 +15,16 @@ const maxReason = computed(() => Math.max(1, ...reasons.value.map(([, n]) => n))
 <template>
   <div class="card h-100">
     <div class="card-body">
-      <h2 class="h6 mb-3">데이터 품질</h2>
+      <h2 class="h6 mb-3 d-flex align-items-center gap-2">
+        <span>데이터 품질</span>
+        <HelpHint label="데이터 품질" align="end">
+          분석은 <strong>정상 운전(STEADY) 구간만</strong> 씁니다. 기동·정지·부하 변동·
+          덕트버너 가동 구간은 오염과 무관하게 차압과 온도를 흔들기 때문입니다.
+          <br /><br />
+          따라서 <strong>제외 비율이 높아도 정상일 수 있습니다</strong> — 기동·정지가 잦은
+          호기일수록 높아집니다. 원본 데이터는 삭제되지 않고 제외 표시만 남습니다.
+        </HelpHint>
+      </h2>
 
       <template v-if="quality">
         <div class="d-flex justify-content-between small">

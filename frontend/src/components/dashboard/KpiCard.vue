@@ -12,7 +12,10 @@ defineProps({
 <template>
   <div class="card h-100" :class="{ 'ui-card-dark': dark }">
     <div class="card-body">
-      <p class="ui-stat-label">{{ label }}</p>
+      <p class="ui-stat-label d-flex align-items-center gap-1">
+        <span>{{ label }}</span>
+        <slot name="help" />
+      </p>
       <p class="ui-stat-value" :class="variant ? `text-${variant}` : ''">
         <slot name="value">{{ value }}</slot>
       </p>
