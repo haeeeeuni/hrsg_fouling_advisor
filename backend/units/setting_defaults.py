@@ -432,6 +432,22 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         max_value=90,
     ),
     SettingDef(
+        "baseline_max_cleanings",
+        1,
+        TYPE_INT,
+        CAT_MODEL,
+        "기준 기간에 쓸 최근 세정 건수",
+        description=(
+            "세정 직후 구간을 이 건수만큼 모아 기준 기간으로 쓴다(specs/06 §2.1). "
+            "2 이상으로 올리면 여러 계절이 담겨 외삽이 줄지만, 세정마다 청정 상태가 "
+            "다르면(화학세정 vs 드라이아이스) 기준이 섞여 정확도가 떨어진다. "
+            "올리기 전에 창별 잔차 평균이 서로 가까운지 반드시 확인한다. 0 이면 전체."
+        ),
+        unit_label="건",
+        min_value=0,
+        max_value=50,
+    ),
+    SettingDef(
         "min_baseline_points",
         1000,
         TYPE_INT,

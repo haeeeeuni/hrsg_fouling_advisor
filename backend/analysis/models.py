@@ -86,6 +86,9 @@ class ModelVersion(models.Model):
 
     baseline_start = models.DateTimeField("학습 기간 시작", null=True, blank=True)
     baseline_end = models.DateTimeField("학습 기간 종료", null=True, blank=True)
+    # 기준 기간은 여러 구간일 수 있다(세정 직후 창 여러 개). 위 start/end 는 그 전체를
+    # 감싸는 범위일 뿐이라 "14개월 기준 기간" 처럼 오해를 부른다 — 실제 구간을 남긴다.
+    baseline_periods = models.JSONField("학습 구간 목록", default=list, blank=True)
     feature_list = models.JSONField("피처 목록", default=list)
     hyperparams = models.JSONField("하이퍼파라미터", default=dict)
     metrics = models.JSONField("지표", default=dict)

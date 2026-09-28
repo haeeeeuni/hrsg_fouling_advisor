@@ -4,7 +4,14 @@ import pandas as pd
 import pytest
 from django.utils import timezone
 
-from analysis.models import AnalysisRun, FoulingIndexPoint, ModelVersion, RunStatus
+from analysis.models import (
+    AnalysisRun,
+    BaselineSource,
+    FoulingIndexPoint,
+    ModelVersion,
+    RunStatus,
+)
+from analysis.pipeline import build_config, resolve_baseline
 from analysis.tests.factories import sawtooth_fouling, steady_frame
 from ingestion.models import Measurement
 from maintenance.models import CleaningEvent
@@ -555,3 +562,92 @@ def test_stale_run_no_longer_blocks_new_analysis(api, normal_user, unit_with_fou
     assert res.status_code == 202
     stale.refresh_from_db()
     assert stale.status == RunStatus.FAILED
+
+
+# --- 기준 기간: 세정 여러 건 (specs/06 §2) ---
+
+
+def _aware_ts(text: str):
+    return timezone.make_aware(pd.Timestamp(text).to_pydatetime())
+
+
+def _stub_frame():
+    """resolve_baseline 은 세정 이력이 있으면 frame 을 보지 않는다(폴백 전용)."""
+    return pd.DataFrame({"timestamp": [pd.Timestamp("2023-01-01")]})
+
+
+@pytest.mark.django_db
+def test_baseline_uses_several_cleanings(unit, seeded):
+    """세정 직후 구간을 여러 개 모아야 계절 커버리지가 생긴다.
+
+    한 창을 길게 늘이는 것과 다르다 — 각 창은 여전히 세정 직후라 청정하다.
+    """
+    for at in ("2023-06-20", "2023-12-31", "2024-07-04"):
+        CleaningEvent.objects.create(unit=unit, cleaned_at=_aware_ts(at), method="화학세정")
+
+    config = {**build_config(unit), "baseline_max_cleanings": 3}
+    periods, source, _ = resolve_baseline(unit, config, _stub_frame())
+
+    assert source == BaselineSource.AUTO_FROM_CLEANING
+    assert len(periods) == 3
+    # 시간순으로 정렬되어 있고, 각 창은 baseline_length_days 만큼이다.
+    assert periods == sorted(periods)
+    for start, stop in periods:
+        assert (stop - start).days == config["baseline_length_days"]
+
+
+@pytest.mark.django_db
+def test_baseline_cleaning_count_is_capped(unit, seeded):
+    """오래된 세정까지 끌어오면 그 사이 설비 열화가 섞인다 — 최근 N건으로 제한."""
+    for at in ("2022-02-01", "2022-08-01", "2023-06-20", "2023-12-31", "2024-07-04"):
+        CleaningEvent.objects.create(unit=unit, cleaned_at=_aware_ts(at), method="화학세정")
+
+    config = {**build_config(unit), "baseline_max_cleanings": 2}
+    periods, _, _ = resolve_baseline(unit, config, _stub_frame())
+
+    assert len(periods) == 2
+    # 가장 최근 2건(2023-12-31, 2024-07-04)의 직후 구간이어야 한다.
+    # 창 시작은 세정일 + baseline_offset_days(기본 1일)다.
+    assert [start.date().isoformat() for start, _ in periods] == ["2024-01-01", "2024-07-05"]
+
+
+@pytest.mark.django_db
+def test_baseline_zero_cap_means_all_cleanings(unit, seeded):
+    for at in ("2023-06-20", "2023-12-31", "2024-07-04"):
+        CleaningEvent.objects.create(unit=unit, cleaned_at=_aware_ts(at), method="화학세정")
+
+    config = {**build_config(unit), "baseline_max_cleanings": 0}
+    periods, _, _ = resolve_baseline(unit, config, _stub_frame())
+
+    assert len(periods) == 3
+
+
+@pytest.mark.django_db
+def test_backtest_cutoff_still_hides_later_cleanings(unit, seeded):
+    """컷오프 이후 세정은 '아직 일어나지 않은 일'이다 (AC-19-4)."""
+    for at in ("2023-06-20", "2023-12-31", "2024-07-04"):
+        CleaningEvent.objects.create(unit=unit, cleaned_at=_aware_ts(at), method="화학세정")
+
+    config = {**build_config(unit), "baseline_max_cleanings": 3}
+    periods, _, _ = resolve_baseline(unit, config, _stub_frame(), cutoff=_aware_ts("2024-01-15"))
+
+    assert len(periods) == 2
+    assert all(start < pd.Timestamp("2024-01-15") for start, _ in periods)
+
+
+@pytest.mark.django_db
+def test_baseline_default_uses_only_the_latest_cleaning(unit, seeded):
+    """기본값은 최근 세정 1건이다 — 기존 동작을 유지한다.
+
+    2건 이상을 합치면 계절 커버리지는 넓어지지만, 세정마다 청정 상태가 다르면
+    FI 가 부정확해진다(`specs/06` §2.1). 통합 시나리오에서 FI–정답 상관이
+    0.949 → 0.886 으로 떨어져 AC-17-3 을 밑돌았다. 기본값이 올라가면 조용히
+    정확도가 나빠지므로 여기서 못박는다.
+    """
+    for at in ("2023-06-20", "2023-12-31", "2024-07-04"):
+        CleaningEvent.objects.create(unit=unit, cleaned_at=_aware_ts(at), method="화학세정")
+
+    periods, _, _ = resolve_baseline(unit, build_config(unit), _stub_frame())
+
+    assert len(periods) == 1
+    assert periods[0][0].date().isoformat() == "2024-07-05"

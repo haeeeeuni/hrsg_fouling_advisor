@@ -106,6 +106,10 @@ def retrain_models(
             version=version,
             baseline_start=_aware(model.baseline_start),
             baseline_end=_aware(model.baseline_end),
+            # 기준 기간은 여러 구간일 수 있다 — start/end 만으로는 복원되지 않는다.
+            baseline_periods=[
+                [_aware(start).isoformat(), _aware(stop).isoformat()] for start, stop in periods
+            ],
             feature_list=model.feature_list,
             hyperparams=model.hyperparams,
             metrics=model.metrics,

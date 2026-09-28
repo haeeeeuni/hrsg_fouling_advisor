@@ -128,6 +128,7 @@ class ModelVersionSerializer(serializers.ModelSerializer):
             "version",
             "baseline_start",
             "baseline_end",
+            "baseline_periods",
             "feature_list",
             "hyperparams",
             "metrics",

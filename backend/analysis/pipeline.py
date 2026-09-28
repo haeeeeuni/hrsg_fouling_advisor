@@ -194,12 +194,26 @@ def resolve_baseline(unit: Unit, config: dict[str, Any], frame: pd.DataFrame, cu
     cleaning_qs = CleaningEvent.objects.filter(unit=unit)
     if cutoff is not None:
         cleaning_qs = cleaning_qs.filter(cleaned_at__lte=cutoff)
-    last_cleaning = cleaning_qs.order_by("-cleaned_at").first()
-    if last_cleaning is not None:
-        end_at = last_cleaning.cleaned_end_at or last_cleaning.cleaned_at
-        start = pd.Timestamp(end_at) + pd.Timedelta(days=config["baseline_offset_days"])
-        stop = start + pd.Timedelta(days=config["baseline_length_days"])
-        return _naive([(start, stop)]), BaselineSource.AUTO_FROM_CLEANING, warnings
+
+    # 세정 **여러 건**의 직후 구간을 모두 기준 기간으로 쓴다.
+    #
+    # 한 창을 길게 늘이면 오염 구간이 섞여 기준 자체가 오염되지만(FI 가 조용히 낮아진다),
+    # 세정 직후 30일 창을 여러 개 모으는 건 각 창이 여전히 청정하다. 대신 계절·부하
+    # 커버리지가 넓어져 학습 영역 밖 예측(외삽)이 줄어든다.
+    #
+    # 너무 오래된 세정까지 끌어오면 그 사이 설비 열화로 '청정 상태' 자체가 달라질 수
+    # 있으므로 최근 baseline_max_cleanings 건으로 제한한다.
+    max_events = int(config["baseline_max_cleanings"])
+    recent = list(
+        cleaning_qs.order_by("-cleaned_at")[:max_events] if max_events > 0 else cleaning_qs
+    )
+    if recent:
+        periods = []
+        for event in sorted(recent, key=lambda e: e.cleaned_at):
+            end_at = event.cleaned_end_at or event.cleaned_at
+            start = pd.Timestamp(end_at) + pd.Timedelta(days=config["baseline_offset_days"])
+            periods.append((start, start + pd.Timedelta(days=config["baseline_length_days"])))
+        return _naive(periods), BaselineSource.AUTO_FROM_CLEANING, warnings
 
     warnings.append(
         {
@@ -359,9 +373,13 @@ def run_analysis(
         # 백테스트는 과거 시점 재현이므로 운영 중인 군집 정의·활성 모델을 바꾸지 않는다.
         persist = ctx.cutoff is None
         cluster_def = _save_cluster_definition(unit, cluster_result, config) if persist else None
-        version_dp = _save_model_version(unit, models["dp"], ModelTarget.DP) if persist else None
+        version_dp = (
+            _save_model_version(unit, models["dp"], ModelTarget.DP, periods) if persist else None
+        )
         version_st = (
-            _save_model_version(unit, models["st"], ModelTarget.STACK_TEMP) if persist else None
+            _save_model_version(unit, models["st"], ModelTarget.STACK_TEMP, periods)
+            if persist
+            else None
         )
         _save_fouling_points(run, fi_result.points)
         _save_trend(run, trend_result)
@@ -429,7 +447,9 @@ def _save_cluster_definition(unit, result, config) -> ClusterDefinition:
     )
 
 
-def _save_model_version(unit, model: em.TrainedModel, target: str) -> ModelVersion:
+def _save_model_version(
+    unit, model: em.TrainedModel, target: str, periods: list[tuple] | None = None
+) -> ModelVersion:
     version = (
         ModelVersion.objects.filter(unit=unit, target=target)
         .order_by("-version")
@@ -445,6 +465,11 @@ def _save_model_version(unit, model: em.TrainedModel, target: str) -> ModelVersi
         version=version,
         baseline_start=_aware(model.baseline_start),
         baseline_end=_aware(model.baseline_end),
+        # 파이프라인 내부는 naive 로 슬라이싱하지만, 저장값은 baseline_start/end 와
+        # 같은 규약(시간대 포함)으로 맞춘다 — 관리자 화면이 그대로 읽는다.
+        baseline_periods=[
+            [_aware(start).isoformat(), _aware(stop).isoformat()] for start, stop in (periods or [])
+        ],
         feature_list=model.feature_list,
         hyperparams=model.hyperparams,
         metrics=model.metrics,
