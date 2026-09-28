@@ -394,6 +394,32 @@ select.ui-pill {
   padding: 0.4em 0.7em;
 }
 
+/*
+ * 단계 번호 원형 표식.
+ * .badge 는 가로(0.7em)·세로(0.4em) 패딩이 달라 rounded-circle 을 줘도 타원이 된다.
+ * 정원을 보장하려면 너비·높이를 같게 고정해야 한다.
+ */
+.ui-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  background-color: var(--admin-border);
+  color: var(--admin-text);
+}
+
+/* 지금 할 수 있는 단계 */
+.ui-step--ready {
+  background-color: var(--admin-primary);
+  color: #ffffff;
+}
+
 .form-control,
 .form-select {
   border-color: var(--admin-border);

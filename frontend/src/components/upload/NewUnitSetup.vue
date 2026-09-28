@@ -33,10 +33,11 @@ const ready = computed(() => active.value.filter((u) => u.is_mapping_complete))
         업로드가 열립니다.
       </p>
 
-      <ol class="list-unstyled mb-0">
+      <!-- list-style:none 은 일부 브라우저에서 목록 의미를 없앤다 — 순서는 스크린리더에도 전달돼야 한다. -->
+      <ol class="list-unstyled mb-0" role="list">
         <!-- 1단계 : 호기 등록 -->
         <li class="d-flex gap-3 pb-3 border-bottom">
-          <span class="badge text-bg-secondary rounded-circle flex-shrink-0 mt-1">1</span>
+          <span class="ui-step" aria-hidden="true">1</span>
           <div class="flex-grow-1">
             <p class="fw-semibold mb-1">호기 등록</p>
             <p class="small text-secondary mb-2">
@@ -59,7 +60,7 @@ const ready = computed(() => active.value.filter((u) => u.is_mapping_complete))
 
         <!-- 2단계 : 컬럼 매핑 -->
         <li class="d-flex gap-3 py-3 border-bottom">
-          <span class="badge text-bg-secondary rounded-circle flex-shrink-0 mt-1">2</span>
+          <span class="ui-step" aria-hidden="true">2</span>
           <div class="flex-grow-1">
             <p class="fw-semibold mb-1">컬럼 매핑</p>
             <p class="small text-secondary mb-2">
@@ -101,10 +102,7 @@ const ready = computed(() => active.value.filter((u) => u.is_mapping_complete))
 
         <!-- 3단계 : 업로드 -->
         <li class="d-flex gap-3 pt-3">
-          <span
-            class="badge rounded-circle flex-shrink-0 mt-1"
-            :class="ready.length ? 'text-bg-success' : 'text-bg-secondary'"
-          >3</span>
+          <span class="ui-step" :class="{ 'ui-step--ready': ready.length }" aria-hidden="true">3</span>
           <div class="flex-grow-1">
             <p class="fw-semibold mb-1">운전 데이터 업로드</p>
             <template v-if="ready.length">
