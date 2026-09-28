@@ -19,22 +19,19 @@ from analysis.models import (
     AutoRecalcPeriodMode,
     BacktestResult,
     FoulingIndexPoint,
-    Notification,
-    NotificationLevel,
     RunStatus,
 )
+
+# 알림 본체는 notifications 모듈에 있다. 여기서 재수출해 기존 import 경로를 유지한다.
+from analysis.notifications import GRADE_ORDER, notify_grade_change  # noqa: F401
 from analysis.pipeline import PipelineContext, PipelineError, build_config, run_analysis
 from analysis.services import backtest as bt
-from analysis.services.fouling_index import GRADE_CAUTION, GRADE_NORMAL, GRADE_WARNING
 from ingestion.models import Measurement
 from maintenance.models import CleaningEvent
 from units.models import Unit
 from units.settings_resolver import get_effective_settings
 
 logger = logging.getLogger(__name__)
-
-# 낮을수록 양호. 등급이 올라갔을 때만 알린다 (specs/19 §1.4).
-GRADE_ORDER = {GRADE_NORMAL: 0, GRADE_CAUTION: 1, GRADE_WARNING: 2}
 
 
 # ---------------------------------------------------------------- 자동 재계산
@@ -112,38 +109,8 @@ def auto_recalc(unit_id: int, trigger: str = "") -> dict:
         return {"analysis_run_id": run.id, "status": RunStatus.FAILED, "error": str(exc)}
 
     if config.notify_on_grade_change:
-        notify_grade_change(unit, base, run)
+        notify_grade_change(unit, base, run, is_auto=True)
     return {**result, "is_auto": True, "trigger": trigger or config.trigger}
-
-
-def notify_grade_change(unit: Unit, base: AnalysisRun, run: AnalysisRun) -> Notification | None:
-    """등급이 올라갔을 때만 알림을 만든다 (AC-19-2)."""
-    before = GRADE_ORDER.get(base.result_grade)
-    after = GRADE_ORDER.get(run.result_grade)
-    if before is None or after is None or after <= before:
-        return None
-
-    labels = {GRADE_NORMAL: "양호", GRADE_CAUTION: "주의", GRADE_WARNING: "경고"}
-    return Notification.objects.create(
-        unit=unit,
-        analysis_run=run,
-        level=NotificationLevel.WARNING,
-        title=(
-            f"{unit.code} 오염 등급 상승: "
-            f"{labels[base.result_grade]} → {labels[run.result_grade]}"
-        ),
-        message=(
-            f"자동 재계산 결과 오염도 지수가 {base.result_fi} → {run.result_fi} 로 변했습니다. "
-            "세정 계획 검토를 권장합니다."
-        ),
-        payload={
-            "before_grade": base.result_grade,
-            "after_grade": run.result_grade,
-            "before_fi": base.result_fi,
-            "after_fi": run.result_fi,
-            "eta_days": run.result_dday,
-        },
-    )
 
 
 def _fail(run: AnalysisRun, stage: str, code: str, message: str) -> None:

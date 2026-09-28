@@ -7,6 +7,7 @@ import ResidualChart from '@/components/charts/ResidualChart.vue'
 import TornadoChart from '@/components/charts/TornadoChart.vue'
 import BenefitPanel from '@/components/dashboard/BenefitPanel.vue'
 import DataQualityPanel from '@/components/dashboard/DataQualityPanel.vue'
+import GradeAlertBanner from '@/components/dashboard/GradeAlertBanner.vue'
 import GradeBadge from '@/components/dashboard/GradeBadge.vue'
 import KpiCard from '@/components/dashboard/KpiCard.vue'
 import ModelAccuracyPanel from '@/components/dashboard/ModelAccuracyPanel.vue'
@@ -112,6 +113,7 @@ watch(
       <span>초기 비밀번호를 변경해 주세요.</span>
       <RouterLink class="btn btn-sm btn-outline-primary" :to="{ name: 'profile' }">비밀번호 변경</RouterLink>
     </div>
+    <GradeAlertBanner :unit-id="units.selectedUnitId" />
     <WarningBanner :warnings="run?.warnings ?? []" />
 
     <LoadingSpinner v-if="analysis.loading" label="분석 결과를 불러오는 중" />

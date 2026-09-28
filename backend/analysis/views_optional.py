@@ -197,7 +197,9 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if (unread := self.request.query_params.get("unread")) is not None:
-            qs = qs.filter(is_read=unread.lower() not in {"0", "false", "no"})
+            # ?unread=true 는 "읽지 않은 것" 을 뜻하므로 is_read 는 그 반대다.
+            wants_unread = unread.lower() not in {"0", "false", "no"}
+            qs = qs.filter(is_read=not wants_unread)
         if unit_id := self.request.query_params.get("unit_id"):
             qs = qs.filter(unit_id=unit_id)
         return qs

@@ -757,6 +757,18 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         min_value=1,
         max_value=1440,
     ),
+    # --- 알림 (specs/19 §1.4) ---
+    SettingDef(
+        "notify_on_manual_run",
+        True,
+        TYPE_BOOL,
+        CAT_SYSTEM,
+        "수동 분석에도 등급 상승 알림",
+        description=(
+            "직전 성공 분석보다 등급이 올라가면 알림을 만든다. "
+            "자동 재계산은 기본 비활성이라 이 경로가 실질적인 알림 발생원이다."
+        ),
+    ),
     # --- Phase 3: FOULING — specs/07, specs/13 §4.2 ---
     SettingDef(
         "fouling_threshold",
