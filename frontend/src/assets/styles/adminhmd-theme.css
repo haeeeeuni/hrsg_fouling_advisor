@@ -202,6 +202,22 @@ h6 {
   color: #ffffff;
 }
 
+/*
+ * 관리자 콘솔 하위 메뉴. 부모 아래로 들여쓰고 왼쪽 선으로 묶어 계층을 보여준다 —
+ * 활성 표시가 색뿐 아니라 위치로도 구분되게 한다 (specs/16 §8).
+ */
+.ui-menu-sub {
+  margin: 0.25rem 0 0.5rem 1.4rem;
+  padding-left: 0.65rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.ui-menu-link--sub {
+  padding: 0.42rem 0.6rem;
+  font-size: 0.82rem;
+  gap: 0;
+}
+
 .ui-sidebar-footer {
   margin-top: auto;
   padding-top: 1.25rem;
