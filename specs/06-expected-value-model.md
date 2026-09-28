@@ -93,6 +93,24 @@ GBR   : n_estimators=300, learning_rate=0.05, max_depth=3,
 | R² | 스택온도 | ≥ 0.85 | 0.70 ~ 0.85 | < 0.70 |
 | MAE | 스택온도 | ≤ 3 ℃ | 3~6 ℃ | > 6 ℃ |
 
+배지는 R² 와 MAE 를 **모두** 만족해야 그 등급이다. 다만 아래 단서가 붙는다.
+
+#### R² 는 타깃이 충분히 변할 때만 쓴다
+
+`R² = 1 − RMSE²/std²` 이므로 **타깃 자신의 변동폭(std)이 작으면 절대 오차가 아무리
+작아도 R² 가 올라가지 않는다.** 청정 기준 기간은 정의상 "세정 직후의 짧고 안정적인 구간"
+이라 이 상황이 자주 생긴다 — 특히 스택온도는 그 안에서 2~3 ℃ 밖에 움직이지 않는 일이 흔하다.
+
+그래서 **타깃 변동폭이 "양호 MAE" 의 `r2_min_sigma_ratio` 배(기본 2배) 미만이면
+R² 판정을 보류하고 MAE 만으로 등급을 매긴다.** 그 구간에서는 절대 오차가 유일하게
+의미 있는 기준이기 때문이다. `r2_min_sigma_ratio = 0` 이면 항상 R² 를 적용한다.
+
+이 단서가 없으면 스택온도를 평균 1.1 ℃ 오차로 맞히는 모델(양호 기준 3 ℃)이 R² 0.6 때문에
+"불량" 으로 찍히고, 사용자는 재학습해도 달라지지 않는 일을 권고받는다.
+차압은 변동폭이 커서 이 단서에 걸리지 않으므로 기존 엄격함을 그대로 유지한다.
+
+판정 근거를 남기기 위해 학습 지표에 `target_std`(검증셋 타깃의 표준편차)를 함께 저장한다.
+
 ## 6. 잔차 산포 (오염도 정규화에 사용)
 청정 기준 기간 검증셋의 잔차 표준편차 `σ_dp`, `σ_st` 와 평균 `μ_dp`, `μ_st`(≈0)를 **모델과 함께 저장**한다.
 이 값이 `07-fouling-index.md`의 정규화 기준이 된다.
@@ -108,7 +126,7 @@ ModelVersion
   - baseline_start / baseline_end       # 청정 기준 기간
   - feature_list : JSON
   - hyperparams : JSON
-  - metrics : JSON {mae, rmse, r2, mape, cv_mae, cv_r2}
+  - metrics : JSON {mae, rmse, r2, mape, cv_mae, cv_r2, target_std}
   - residual_std / residual_mean
   - training_rows
   - artifact_path : 직렬화 파일 경로 (joblib)

@@ -444,6 +444,21 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
     SettingDef("r2_good", 0.85, TYPE_FLOAT, CAT_MODEL, "R² 양호 기준", min_value=0, max_value=1),
     SettingDef("r2_warn", 0.70, TYPE_FLOAT, CAT_MODEL, "R² 주의 기준", min_value=0, max_value=1),
     SettingDef(
+        "r2_min_sigma_ratio",
+        2.0,
+        TYPE_FLOAT,
+        CAT_MODEL,
+        "R² 판정 최소 변동폭 배수",
+        description=(
+            "타깃 변동폭(std)이 '양호 MAE' 의 이 배수 미만이면 R² 판정을 보류하고 "
+            "MAE 만으로 본다. R²=1−RMSE²/std² 이라 변동폭이 작으면 오차가 작아도 "
+            "R² 가 오르지 않기 때문이다(specs/06 §5). 0 이면 항상 R² 를 적용한다."
+        ),
+        unit_label="배",
+        min_value=0,
+        max_value=100,
+    ),
+    SettingDef(
         "mae_stack_good_c",
         3.0,
         TYPE_FLOAT,

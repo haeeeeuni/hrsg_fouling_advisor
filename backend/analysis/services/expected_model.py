@@ -189,7 +189,11 @@ def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     r2 = float(r2_score(y_true, y_pred)) if len(y_true) > 1 else float("nan")
     denominator = np.where(np.abs(y_true) < 1e-9, np.nan, np.abs(y_true))
     mape = float(np.nanmean(np.abs((y_true - y_pred) / denominator)) * 100)
-    return {"mae": mae, "rmse": rmse, "r2": r2, "mape": mape}
+    # target_std: 타깃 자신의 변동폭. R² = 1 − RMSE²/std² 이므로, 이 값이 작으면
+    # 절대 오차가 아무리 작아도 R² 가 올라갈 수 없다. 품질 판정에서 R² 를
+    # 적용할지 결정하는 데 쓴다(specs/06 §5).
+    target_std = float(np.std(y_true)) if len(y_true) > 1 else float("nan")
+    return {"mae": mae, "rmse": rmse, "r2": r2, "mape": mape, "target_std": target_std}
 
 
 def train(
@@ -297,6 +301,23 @@ def predict(model: TrainedModel, frame: pd.DataFrame, config: dict[str, Any]) ->
     return pd.Series(predictions, index=frame.index)
 
 
+def r2_is_meaningful(metrics: dict[str, float], mae_good: float, config: dict) -> bool:
+    """R² 를 품질 판정에 쓸 수 있는 상황인가 (specs/06 §5).
+
+    `R² = 1 − RMSE²/std²` 이므로 타깃 자신이 거의 변하지 않으면(std 가 작으면)
+    절대 오차가 아무리 작아도 R² 가 올라가지 않는다. 청정 기준 기간은 정의상
+    "운전이 안정적인 짧은 구간" 이라 스택온도가 몇 ℃ 밖에 움직이지 않는 일이 흔하다.
+
+    그래서 "양호로 볼 오차" 의 몇 배 이상 타깃이 변할 때만 R² 로 판정한다.
+    변동폭이 그보다 작으면 MAE 만으로 본다 — 그 구간에서는 절대 오차가
+    유일하게 의미 있는 기준이다.
+    """
+    target_std = metrics.get("target_std", float("nan"))
+    if np.isnan(target_std) or mae_good <= 0:
+        return True
+    return target_std >= mae_good * config["r2_min_sigma_ratio"]
+
+
 def grade_metrics(target: str, metrics: dict[str, float], mean_value: float, config: dict) -> str:
     """양호 / 주의 / 불량 배지 (specs/06 §5)."""
     r2 = metrics.get("r2", float("nan"))
@@ -309,7 +330,14 @@ def grade_metrics(target: str, metrics: dict[str, float], mean_value: float, con
         mae_good = mean_value * config["mae_dp_good_pct"] / 100
         mae_warn = mean_value * config["mae_dp_warn_pct"] / 100
 
-    if np.isnan(r2) or np.isnan(mae):
+    if np.isnan(mae):
+        return "POOR"
+
+    # 타깃 변동폭이 작으면 R² 판정을 보류하고 MAE 만 본다.
+    if not r2_is_meaningful(metrics, mae_good, config):
+        return "GOOD" if mae <= mae_good else ("FAIR" if mae <= mae_warn else "POOR")
+
+    if np.isnan(r2):
         return "POOR"
     if r2 >= config["r2_good"] and mae <= mae_good:
         return "GOOD"

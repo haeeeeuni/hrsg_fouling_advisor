@@ -53,6 +53,7 @@ DEFAULT_CONFIG: dict = {
     "ridge_poly_degree": 2,
     "r2_good": 0.85,
     "r2_warn": 0.70,
+    "r2_min_sigma_ratio": 2.0,
     "mae_stack_good_c": 3.0,
     "mae_stack_warn_c": 6.0,
     "mae_dp_good_pct": 5.0,

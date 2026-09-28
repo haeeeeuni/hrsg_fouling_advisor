@@ -236,3 +236,52 @@ def test_dp_mae_threshold_scales_with_mean():
 
 def test_nan_metrics_grade_poor():
     assert em.grade_metrics(em.TARGET_DP, {"r2": float("nan"), "mae": 1.0}, 3.0, config()) == "POOR"
+
+
+# --- 변동폭이 작을 때의 R² 보류 (specs/06 §5) ---
+
+
+def test_low_variance_target_is_graded_by_mae_not_r2():
+    """청정 기준 기간의 스택온도는 몇 ℃ 밖에 안 움직여 R² 가 구조적으로 낮다.
+
+    `R² = 1 − RMSE²/std²` 이므로 std 가 작으면 절대 오차가 아무리 작아도
+    R² 가 오르지 않는다. 그 구간을 '정확도 불량' 으로 부르면 안 된다.
+    """
+    metrics = {"r2": 0.63, "mae": 1.1, "target_std": 2.4}  # 샘플 호기에서 실측된 값
+
+    assert em.grade_metrics(em.TARGET_ST, metrics, 110.0, config()) == "GOOD"
+
+
+def test_low_variance_guard_still_fails_a_genuinely_bad_model():
+    """R² 를 보류해도 MAE 가 나쁘면 그대로 불량이다."""
+    metrics = {"r2": 0.63, "mae": 9.0, "target_std": 2.4}
+
+    assert em.grade_metrics(em.TARGET_ST, metrics, 110.0, config()) == "POOR"
+
+
+def test_r2_still_applies_when_the_target_varies_enough():
+    """변동폭이 충분하면 R² 판정은 그대로 살아 있어야 한다 — 가드가 판정을 무력화하면 안 된다."""
+    metrics = {"r2": 0.50, "mae": 1.0, "target_std": 30.0}
+
+    assert em.grade_metrics(em.TARGET_ST, metrics, 110.0, config()) == "POOR"
+
+
+def test_dp_grading_is_unaffected_by_the_guard():
+    """차압은 변동폭이 커서 가드에 걸리지 않는다 — 기존 엄격함을 유지한다."""
+    metrics = {"r2": 0.50, "mae": 0.1, "target_std": 0.5}
+
+    assert em.grade_metrics(em.TARGET_DP, metrics, 3.0, config()) == "POOR"
+
+
+def test_guard_can_be_disabled_by_setting_ratio_to_zero():
+    metrics = {"r2": 0.63, "mae": 1.1, "target_std": 2.4}
+
+    assert em.grade_metrics(em.TARGET_ST, metrics, 110.0, config(r2_min_sigma_ratio=0)) == "POOR"
+
+
+def test_metrics_report_target_std():
+    """판정에 쓰이므로 학습 지표에 반드시 실려야 한다."""
+    frame = steady_frame(days=20, interval_min=30, seed=3)
+    model = em.train(frame, em.TARGET_ST, config(), set())
+
+    assert model.metrics["target_std"] > 0
