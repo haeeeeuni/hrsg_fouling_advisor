@@ -224,6 +224,77 @@ def current_value(daily: pd.DataFrame, window_days: int) -> tuple[float | None, 
     return float(window["fi_value"].median()), last_date
 
 
+# --- 신호 진단 : 차압 vs 스택온도 (specs/07 §8) ---
+
+SIGNAL_CONSISTENT = "CONSISTENT"
+SIGNAL_DP_DOMINANT = "DP_DOMINANT"
+SIGNAL_ST_DOMINANT = "ST_DOMINANT"
+SIGNAL_QUIET = "QUIET"
+SIGNAL_SATURATED = "SATURATED"
+
+# 두 점수가 이만큼 벌어지면 '한쪽 우세' 로 본다. 실측 분포를 보고 정한 값이며
+# 설정으로 바꿀 수 있다(signal_gap_threshold).
+DEFAULT_SIGNAL_GAP = 25.0
+# 최근 구간에서 이 비율 이상이 상한에 닿아 있으면 비교가 성립하지 않는다.
+DEFAULT_SATURATION_RATIO = 0.30
+SATURATION_SCORE = 99.5
+
+
+def diagnose_signals(
+    score_dp: pd.Series,
+    score_st: pd.Series,
+    *,
+    gap_threshold: float = DEFAULT_SIGNAL_GAP,
+    quiet_below: float = 30.0,
+    saturation_ratio: float = DEFAULT_SATURATION_RATIO,
+) -> dict[str, Any]:
+    """두 채널이 같은 이야기를 하는지 판정한다 (specs/07 §8).
+
+    오염이 원인이라면 차압과 스택온도가 **함께** 올라야 한다 — 원인이 하나이기 때문이다.
+    한쪽만 오르면 계측 이상이나 운전 변화를 의심할 근거가 된다.
+
+    **포화를 먼저 본다.** 점수는 clip(0,100) 이라 잔차가 sigma_ref·σ 를 넘으면 100 에
+    고정된다. 고정된 채널은 '얼마나 더 나쁜지' 를 담지 못하므로 두 값의 차이가 의미를
+    잃는다. 이때는 우세 판정을 하지 않는다.
+    """
+    dp = pd.to_numeric(score_dp, errors="coerce").dropna()
+    st = pd.to_numeric(score_st, errors="coerce").dropna()
+    if dp.empty or st.empty:
+        return {
+            "verdict": SIGNAL_QUIET,
+            "dp": None,
+            "st": None,
+            "gap": None,
+            "dp_saturated_ratio": None,
+            "st_saturated_ratio": None,
+        }
+
+    dp_sat = float((dp >= SATURATION_SCORE).mean())
+    st_sat = float((st >= SATURATION_SCORE).mean())
+    dp_mean, st_mean = float(dp.mean()), float(st.mean())
+    gap = dp_mean - st_mean
+
+    result = {
+        "dp": round(dp_mean, 1),
+        "st": round(st_mean, 1),
+        "gap": round(gap, 1),
+        "dp_saturated_ratio": round(dp_sat, 3),
+        "st_saturated_ratio": round(st_sat, 3),
+    }
+
+    if dp_sat >= saturation_ratio or st_sat >= saturation_ratio:
+        result["verdict"] = SIGNAL_SATURATED
+        return result
+    if max(dp_mean, st_mean) < quiet_below:
+        result["verdict"] = SIGNAL_QUIET
+        return result
+    if abs(gap) < gap_threshold:
+        result["verdict"] = SIGNAL_CONSISTENT
+        return result
+    result["verdict"] = SIGNAL_DP_DOMINANT if gap > 0 else SIGNAL_ST_DOMINANT
+    return result
+
+
 def confidence_of(
     model_grades: list[str],
     valid_points: int,

@@ -11,6 +11,7 @@ import GradeAlertBanner from '@/components/dashboard/GradeAlertBanner.vue'
 import GradeBadge from '@/components/dashboard/GradeBadge.vue'
 import KpiCard from '@/components/dashboard/KpiCard.vue'
 import ModelAccuracyPanel from '@/components/dashboard/ModelAccuracyPanel.vue'
+import SignalDiagnosisPanel from '@/components/dashboard/SignalDiagnosisPanel.vue'
 import WarningBanner from '@/components/dashboard/WarningBanner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import HelpHint from '@/components/common/HelpHint.vue'
@@ -268,6 +269,9 @@ watch(
       </div>
 
       <div class="row g-3">
+        <div class="col-12 col-xl-4">
+          <SignalDiagnosisPanel :diagnosis="analysis.signalDiagnosis" />
+        </div>
         <div class="col-12 col-xl-4"><ModelAccuracyPanel :metrics="analysis.modelMetrics" /></div>
         <div class="col-12 col-xl-4"><DataQualityPanel :quality="analysis.dataQuality" /></div>
         <div class="col-12 col-xl-4"><ClusterBarChart :clusters="analysis.clusters" /></div>

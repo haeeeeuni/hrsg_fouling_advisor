@@ -849,6 +849,21 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         max_value=1,
     ),
     SettingDef(
+        "signal_gap_threshold",
+        25.0,
+        TYPE_FLOAT,
+        CAT_FOULING,
+        "신호 괴리 판정 임계값",
+        description=(
+            "차압 점수와 스택온도 점수가 이만큼 벌어지면 '한쪽 우세' 로 본다(specs/07 §8). "
+            "오염이 원인이면 두 채널이 함께 올라야 하므로, 한쪽만 오르면 계측 이상이나 "
+            "운전 변화를 의심할 근거가 된다."
+        ),
+        unit_label="점",
+        min_value=0,
+        max_value=100,
+    ),
+    SettingDef(
         "normalization_method",
         "SIGMA",
         TYPE_STRING,

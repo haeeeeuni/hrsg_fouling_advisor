@@ -247,6 +247,24 @@ def test_result_endpoints_return_data(api, normal_user, unit_with_fouling):
     assert len(residuals.data) > 0
 
 
+def test_signal_diagnosis_uses_current_window(api, normal_user, unit_with_fouling):
+    """신호 진단은 '현재 오염도 지수' 와 같은 기간을 본다 (specs/07 §8)."""
+    res = start_analysis(api, normal_user, unit_with_fouling)
+    run = AnalysisRun.objects.get(pk=res.data["analysis_run_id"])
+
+    diagnosis = api.get(f"{ANALYSIS_URL}{run.pk}/signal-diagnosis/")
+
+    assert diagnosis.status_code == 200
+    assert diagnosis.data["verdict"] in {
+        "CONSISTENT",
+        "DP_DOMINANT",
+        "ST_DOMINANT",
+        "QUIET",
+        "SATURATED",
+    }
+    assert diagnosis.data["window_days"] == run.settings_snapshot["current_window_days"]
+
+
 def test_fouling_index_defaults_to_overall_series(api, normal_user, unit_with_fouling):
     """차트 데이터는 일 단위 집계로만 반환한다 (specs/18 §1)."""
     res = start_analysis(api, normal_user, unit_with_fouling)

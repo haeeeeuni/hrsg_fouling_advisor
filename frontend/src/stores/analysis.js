@@ -10,6 +10,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
   const clusters = ref([])
   const modelMetrics = ref(null)
   const dataQuality = ref(null)
+  const signalDiagnosis = ref(null)
   const trend = ref(null)
   const benefit = ref(null)
   const loading = ref(false)
@@ -38,16 +39,19 @@ export const useAnalysisStore = defineStore('analysis', () => {
       trend.value = data.trend ?? null
       benefit.value = data.benefit ?? null
 
-      const [fi, cl, metrics, quality] = await Promise.all([
+      const [fi, cl, metrics, quality, signals] = await Promise.all([
         analysisApi.fetchFoulingIndex(runId),
         analysisApi.fetchClusters(runId),
         analysisApi.fetchModelMetrics(runId),
         analysisApi.fetchDataQuality(runId),
+        // 신호 진단은 부가 정보다 — 실패해도 대시보드 전체를 막지 않는다.
+        analysisApi.fetchSignalDiagnosis(runId).catch(() => ({ data: null })),
       ])
       foulingIndex.value = fi.data
       clusters.value = cl.data
       modelMetrics.value = metrics.data
       dataQuality.value = quality.data
+      signalDiagnosis.value = signals.data
     } finally {
       loading.value = false
     }
@@ -87,6 +91,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
     clusters.value = []
     modelMetrics.value = null
     dataQuality.value = null
+    signalDiagnosis.value = null
   }
 
   return {
@@ -95,6 +100,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
     clusters,
     modelMetrics,
     dataQuality,
+    signalDiagnosis,
     trend,
     benefit,
     loading,

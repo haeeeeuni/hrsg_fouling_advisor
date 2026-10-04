@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pandas as pd
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -30,9 +31,11 @@ from analysis.serializers import (
     ModelVersionSerializer,
     TrendForecastSerializer,
 )
+from analysis.services import fouling_index as fx
 from common import jobs
 from common.exceptions import Conflict, NotFound
 from units.models import Unit
+from units.settings_resolver import get_effective_settings
 
 
 class AnalysisRunViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
@@ -176,6 +179,40 @@ class AnalysisRunViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet
                 "warnings": run.warnings,
             }
         )
+
+    @action(detail=True, methods=["get"], url_path="signal-diagnosis")
+    def signal_diagnosis(self, request: Request, pk: str | None = None) -> Response:
+        """차압·스택온도 두 채널이 같은 이야기를 하는지 (specs/07 §8).
+
+        저장된 FoulingIndexPoint 에서 계산하므로 **과거 분석도 재실행 없이** 나온다.
+        """
+        run = self.get_object()
+        # 분석 당시 스냅샷이 우선이다. 이 기능보다 먼저 만들어진 스냅샷에는
+        # signal_gap_threshold 가 없으므로 현재 유효 설정으로 빈 키만 채운다.
+        settings_map = {**get_effective_settings(run.unit_id), **(run.settings_snapshot or {})}
+        # 대시보드의 '현재 오염도 지수' 와 같은 기간을 본다.
+        window_days = int(settings_map["current_window_days"])
+        points = (
+            FoulingIndexPoint.objects.filter(analysis_run=run, cluster_key="")
+            .order_by("-date")
+            .values("score_dp", "score_st")[:window_days]
+        )
+        frame = pd.DataFrame(list(points))
+        if frame.empty:
+            raise NotFound(message="오염도 지수 포인트가 없습니다.")
+
+        result = fx.diagnose_signals(
+            frame["score_dp"],
+            frame["score_st"],
+            gap_threshold=float(settings_map["signal_gap_threshold"]),
+            quiet_below=float(settings_map["grade_caution_min"]),
+        )
+        result["window_days"] = window_days
+        result["weights"] = {
+            "dp": settings_map.get("weight_dp"),
+            "stack_temp": settings_map.get("weight_stack_temp"),
+        }
+        return Response(result)
 
     @action(detail=True, methods=["get"])
     def trend(self, request: Request, pk: str | None = None) -> Response:

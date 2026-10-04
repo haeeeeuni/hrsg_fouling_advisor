@@ -1,4 +1,4 @@
-"""오염도 지수 성질 기반 검증 (specs/07 §8, AGENTS.md §8). DB 불필요."""
+"""오염도 지수 성질 기반 검증 (specs/07 §9, AGENTS.md §8). DB 불필요."""
 
 import numpy as np
 import pandas as pd
@@ -352,3 +352,71 @@ def test_smoothing_removes_spikes_but_keeps_level():
     smoothed = fx.smooth(values, timestamps, 24)
 
     assert smoothed.iloc[250] == pytest.approx(1.0)
+
+
+# --- 신호 진단 : 차압 vs 스택온도 (specs/07 §8) ---
+
+
+def _series(values):
+    return pd.Series(values, dtype=float)
+
+
+def test_both_signals_rising_is_consistent():
+    """오염이 원인이면 두 채널이 함께 오른다 — 원인이 하나이기 때문이다."""
+    result = fx.diagnose_signals(_series([70, 72, 68]), _series([65, 66, 64]))
+
+    assert result["verdict"] == fx.SIGNAL_CONSISTENT
+
+
+def test_dp_only_is_flagged_as_dp_dominant():
+    """차압만 오르면 트랜스미터 드리프트·댐퍼 고착도 같은 신호를 만든다."""
+    result = fx.diagnose_signals(_series([70, 72, 68]), _series([10, 12, 8]))
+
+    assert result["verdict"] == fx.SIGNAL_DP_DOMINANT
+    assert result["gap"] > 0
+
+
+def test_stack_only_is_flagged_as_st_dominant():
+    result = fx.diagnose_signals(_series([10, 12, 8]), _series([70, 72, 68]))
+
+    assert result["verdict"] == fx.SIGNAL_ST_DOMINANT
+    assert result["gap"] < 0
+
+
+def test_quiet_when_neither_signal_is_elevated():
+    result = fx.diagnose_signals(_series([5, 6, 4]), _series([8, 7, 9]))
+
+    assert result["verdict"] == fx.SIGNAL_QUIET
+
+
+def test_saturation_blocks_the_comparison():
+    """상한에 고정된 채널은 '얼마나 더 나쁜지' 를 담지 못한다.
+
+    샘플 5개 호기 중 4개가 차압 100% 포화 상태였다. 이때 차이를 '차압 우세' 로
+    읽으면 계측 이상으로 오진한다 — 실제로는 sigma_ref 를 넘었을 뿐이다.
+    """
+    result = fx.diagnose_signals(_series([100, 100, 100]), _series([40, 42, 38]))
+
+    assert result["verdict"] == fx.SIGNAL_SATURATED
+    assert result["dp_saturated_ratio"] == 1.0
+
+
+def test_partial_saturation_below_threshold_still_compares():
+    """포화가 드물면 비교는 성립한다."""
+    dp = _series([100] + [70] * 9)  # 10% 만 포화
+    result = fx.diagnose_signals(dp, _series([68] * 10))
+
+    assert result["verdict"] == fx.SIGNAL_CONSISTENT
+
+
+def test_gap_threshold_is_configurable():
+    dp, st = _series([70, 70]), _series([50, 50])
+
+    assert fx.diagnose_signals(dp, st, gap_threshold=25)["verdict"] == fx.SIGNAL_CONSISTENT
+    assert fx.diagnose_signals(dp, st, gap_threshold=15)["verdict"] == fx.SIGNAL_DP_DOMINANT
+
+
+def test_missing_channel_is_quiet_not_a_crash():
+    result = fx.diagnose_signals(_series([float("nan")] * 3), _series([70, 70, 70]))
+
+    assert result["verdict"] == fx.SIGNAL_QUIET

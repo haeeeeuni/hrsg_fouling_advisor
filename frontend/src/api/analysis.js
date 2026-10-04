@@ -46,6 +46,10 @@ export function fetchDataQuality(id) {
   return client.get(`/analysis-runs/${id}/data-quality/`)
 }
 
+export function fetchSignalDiagnosis(id) {
+  return client.get(`/analysis-runs/${id}/signal-diagnosis/`)
+}
+
 export function fetchTrend(id) {
   return client.get(`/analysis-runs/${id}/trend/`)
 }

@@ -10,6 +10,7 @@ vi.mock('@/api/analysis', () => ({
   fetchClusters: vi.fn(),
   fetchModelMetrics: vi.fn(),
   fetchDataQuality: vi.fn(),
+  fetchSignalDiagnosis: vi.fn(),
   fetchTrend: vi.fn(),
   fetchBenefit: vi.fn(),
   recalculateBenefit: vi.fn(),
@@ -33,6 +34,9 @@ function mockAll() {
   api.fetchClusters.mockResolvedValue({ data: [{ cluster_key: 'L3-SU' }] })
   api.fetchModelMetrics.mockResolvedValue({ data: { dp: {}, stack_temp: {} } })
   api.fetchDataQuality.mockResolvedValue({ data: { row_valid: 100 } })
+  api.fetchSignalDiagnosis.mockResolvedValue({
+    data: { verdict: 'CONSISTENT', dp: 70.1, st: 65.3, gap: 4.8 },
+  })
 }
 
 describe('analysis store', () => {
@@ -58,7 +62,7 @@ describe('analysis store', () => {
     )
   })
 
-  it('결과 조회는 다섯 엔드포인트를 병렬로 부른다', async () => {
+  it('결과 조회는 여섯 엔드포인트를 병렬로 부른다', async () => {
     const store = useAnalysisStore()
 
     await store.fetchResult(7)
@@ -67,8 +71,20 @@ describe('analysis store', () => {
     expect(store.foulingIndex).toHaveLength(1)
     expect(store.clusters).toHaveLength(1)
     expect(store.dataQuality.row_valid).toBe(100)
+    expect(store.signalDiagnosis.verdict).toBe('CONSISTENT')
     expect(store.hasResult).toBe(true)
     expect(store.grade).toBe('WARNING')
+  })
+
+  it('신호 진단이 실패해도 대시보드는 열린다', async () => {
+    // 부가 정보이므로 여기서 던지면 나머지 패널까지 못 그린다.
+    api.fetchSignalDiagnosis.mockRejectedValue(new Error('404'))
+    const store = useAnalysisStore()
+
+    await store.fetchResult(7)
+
+    expect(store.hasResult).toBe(true)
+    expect(store.signalDiagnosis).toBeNull()
   })
 
   it('최근 성공 분석을 불러온다', async () => {
