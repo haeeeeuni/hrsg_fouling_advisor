@@ -35,3 +35,6 @@ frontend/dist/
 
 # TLS 인증서·키는 저장소에 두지 않는다 (AGENTS.md §7)
 deploy/certs/
+
+# Claude Code 개인 로컬 설정
+CLAUDE.local.md
