@@ -6,6 +6,10 @@
 !backend/reports/fonts/OFL.txt
 *.csv
 
+# Claude Code 대화 기록·진행 메모 (로컬 전용)
+c29bce4e-*.md
+*_CLAUDE.md
+
 # Python
 backend/.venv/
 __pycache__/
