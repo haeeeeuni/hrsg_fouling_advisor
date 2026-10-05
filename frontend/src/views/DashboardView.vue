@@ -83,6 +83,10 @@ onMounted(async () => {
   }
 })
 
+function reload() {
+  if (units.selectedUnitId) analysis.fetchLatest(units.selectedUnitId)
+}
+
 watch(
   () => units.selectedUnitId,
   async (id) => {
@@ -119,6 +123,12 @@ watch(
     <WarningBanner :warnings="run?.warnings ?? []" />
 
     <LoadingSpinner v-if="analysis.loading" label="분석 결과를 불러오는 중" />
+
+    <!-- 조회 실패를 "결과 없음" 으로 보여주면 사용자가 장애를 데이터 부재로 오인한다. -->
+    <div v-else-if="analysis.error" class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+      <span>분석 결과를 불러오지 못했습니다. {{ analysis.error.message }}</span>
+      <button type="button" class="btn btn-sm btn-outline-danger" @click="reload">다시 시도</button>
+    </div>
 
     <div v-else-if="!analysis.hasResult" class="card">
       <div class="card-body">

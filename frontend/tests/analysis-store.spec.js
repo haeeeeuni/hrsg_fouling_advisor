@@ -191,4 +191,36 @@ describe('analysis store — Phase 4', () => {
     expect(store.trend).toBeNull()
     expect(store.benefit).toBeNull()
   })
+
+  it('최근 분석 조회가 실패하면 결과를 비우고 오류를 담는다(던지지 않는다)', async () => {
+    const store = useAnalysisStore()
+    api.fetchRuns.mockResolvedValue({ data: { results: [{ id: 7 }] } })
+    await store.fetchLatest(1)
+    expect(store.hasResult).toBe(true)
+
+    const failure = Object.assign(new Error('500'), { parsed: { code: 'INTERNAL_ERROR', message: '서버 오류' } })
+    api.fetchRuns.mockRejectedValue(failure)
+    await expect(store.fetchLatest(2)).resolves.toBeNull()
+
+    // 이전 호기(1)의 결과가 호기 2 화면에 남으면 안 된다.
+    expect(store.hasResult).toBe(false)
+    expect(store.error).toEqual({ code: 'INTERNAL_ERROR', message: '서버 오류' })
+    expect(store.loading).toBe(false)
+  })
+
+  it('호기를 빠르게 바꾸면 늦게 도착한 이전 호기의 응답을 버린다', async () => {
+    const store = useAnalysisStore()
+    let releaseFirst
+    api.fetchRuns
+      .mockImplementationOnce(() => new Promise((resolve) => (releaseFirst = resolve)))
+      .mockResolvedValueOnce({ data: { results: [{ id: 8 }] } })
+    api.fetchRun.mockImplementation(async (id) => ({ data: { ...RUN, id } }))
+
+    const first = store.fetchLatest(1) // 호기 1 — 응답이 늦다
+    await store.fetchLatest(2) // 호기 2 — 먼저 끝난다
+    releaseFirst({ data: { results: [{ id: 7 }] } })
+    await first
+
+    expect(store.currentRun.id).toBe(8)
+  })
 })
