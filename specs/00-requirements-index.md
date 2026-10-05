@@ -79,6 +79,7 @@
 | TR-04 | pandas, scikit-learn 기반 분석 | `06-expected-value-model.md` |
 | TR-05 | openpyxl 엑셀, 한글 폰트 포함 PDF | `12-reports.md` |
 | TR-06 | User/Admin은 Django AbstractUser 상속 확장 | `01-auth-and-users.md`, `14-data-model.md` |
+| TR-07 | Playwright + Chrome E2E 테스트 | `21-e2e-testing.md` |
 
 ---
 
@@ -95,5 +96,5 @@
                                                                         │
 01 인증  ─ 전 화면 전제                                                  v
 13 관리자 ─ 설정값 공급                                            19 옵션기능
-14 데이터모델 / 15 API / 16 프론트 / 17 샘플데이터 / 18 비기능 ─ 전 구간 공통
+14 데이터모델 / 15 API / 16 프론트 / 17 샘플데이터 / 18 비기능 / 21 E2E ─ 전 구간 공통
 ```

@@ -205,6 +205,11 @@ python scripts/generate_sample_data.py --unit-code U1 --months 24 --cleanings 3 
 cd frontend && npm install && npm run dev
 npm run build
 npm run test
+
+# E2E (루트, specs/21) — Django·Celery 를 먼저 띄운다. Vite 는 자동 기동
+cd .. && npm install
+npm run test:e2e                              # 설치된 Chrome, 1280×800
+E2E_BASE_URL=https://hrsg-web.onrender.com npm run test:e2e   # 배포본 읽기 전용 스모크(@mutates 제외)
 ```
 
 ## 테스트 환경에서 한 번씩 걸리는 것
@@ -217,6 +222,9 @@ npm run test
 - **로그인 스로틀 카운터는 테스트마다 비운다**(IP 기준 분당 10회). 안 비우면 뒤 테스트가 429 를 받는다.
 - **Node 26 은 자체 `localStorage` 전역을 갖는데 `--localstorage-file` 없이는 `undefined` 이고
   jsdom 구현을 가린다.** `frontend/tests/setup.js` 가 비어 있을 때만 채운다.
+- **macOS 에서 Celery 는 `--pool=solo` 로 띄운다.** 기본 prefork 는 태스크를 받자마자
+  `ValueError: not enough values to unpack` 로 죽고, 화면은 검증·분석 완료를 끝내 표시하지 못한다.
+- **E2E 는 로그인 스로틀(분당 10회)을 공유한다.** 저장된 관리자 세션(`Api.asAdmin()`)을 재사용하고 폼 로그인을 늘리지 않는다(`specs/21` §4.2).
 - **`git bisect` 주의:** `6380e16`(fix) 한 지점은 테스트가 실패한다. 코드 버그와 테스트 환경 문제가
   서로를 가리고 있어 두 커밋(`6380e16`, `4489578`)을 같이 적용해야 통과한다.
   이 구간을 지날 때는 쫓는 버그의 테스트만 판정 기준으로 쓰거나 `git bisect skip` 한다.

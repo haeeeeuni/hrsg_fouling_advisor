@@ -38,3 +38,14 @@ deploy/certs/
 
 # Claude Code 개인 로컬 설정
 CLAUDE.local.md
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+/playwright/.data/
+# Playwright MCP 가 남기는 페이지 스냅샷
+.playwright-mcp/

@@ -1,0 +1,31 @@
+{
+  "name": "hrsg_fouling_advisor",
+  "version": "1.0.0",
+  "description": "복합화력 발전소 **HRSG(배열회수보일러) 가스측 오염도**를 운전 데이터에서 산출해, **세정 시점(D-day)** 과 **세정 편익(원)** 을 제시하는 사내 웹앱.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:chrome": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haeeeeuni/hrsg_fouling_advisor.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/haeeeeuni/hrsg_fouling_advisor/issues"
+  },
+  "homepage": "https://github.com/haeeeeuni/hrsg_fouling_advisor#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4"
+  }
+}
