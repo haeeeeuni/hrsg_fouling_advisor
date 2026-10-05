@@ -16,10 +16,12 @@ test('세션이 만료되면 다음 동작에서 로그인 화면으로 보낸�
 
   // 서버 세션 만료와 같은 효과 — 이 브라우저 컨텍스트의 쿠키만 지운다(저장된 관리자 세션은 그대로).
   await page.context().clearCookies();
-  await page.locator('.ui-sidebar').getByRole('link', { name: '정비 이력' }).click();
+  // 클라이언트는 API 가 401 을 줄 때 만료를 안다. 호기가 없으면 API 를 부르지 않는 화면도 있어(빈 DB 의 CI),
+  // 데이터와 무관하게 항상 목록을 읽는 사용자 관리 화면으로 간다.
+  await page.locator('.ui-sidebar').getByRole('link', { name: '관리자 콘솔' }).click();
 
-  // 클라이언트는 401 을 받으면 로그인으로 보낸다(specs/16 §6). 빈 화면이나 오류 토스트에 멈추면 안 된다.
-  await expect(page).toHaveURL(/\/login\?redirect=(%2F|\/)maintenance$/);
+  // 401 을 받으면 로그인으로 보낸다(specs/16 §6). 빈 화면이나 오류 토스트에 멈추면 안 된다.
+  await expect(page).toHaveURL(/\/login\?redirect=(%2F|\/)admin(%2F|\/)users$/);
 });
 
 test('없는 경로는 404 화면을 보여주고 대시보드로 돌아갈 수 있다', async ({ page }) => {
