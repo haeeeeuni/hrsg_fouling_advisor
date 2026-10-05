@@ -86,7 +86,7 @@ POST  /api/jobs/{job_id}/cancel/  → 202
 | GET | `/units/` | 인증 | 호기 목록 (`?is_active=true`). 매핑 완료 여부 `is_mapping_complete` 포함 |
 | POST | `/units/` | 관리자 | 호기 생성 |
 | GET/PATCH/DELETE | `/units/{id}/` | 관리자(수정/삭제) | |
-| GET | `/units/{id}/column-mappings/` | 관리자 | 매핑 목록 |
+| GET | `/units/{id}/column-mappings/` | 인증 | 매핑 목록. 업로드 화면의 컬럼명 안내에 쓰므로 조회는 일반 사용자도 가능(specs/03 §2.2) |
 | PUT | `/units/{id}/column-mappings/` | 관리자 | 매핑 일괄 저장 |
 | POST | `/units/{id}/column-mappings/preview/` | 관리자 | 샘플 파일 + 매핑 → 상위 20행 변환 미리보기 |
 | GET | `/units/{id}/column-mappings/versions/` | 관리자 | 매핑 변경 이력 |

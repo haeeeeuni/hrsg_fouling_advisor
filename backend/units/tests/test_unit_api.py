@@ -71,9 +71,12 @@ def test_admin_can_create_unit(api, admin_user):
     assert res.data["is_mapping_complete"] is False
 
 
-def test_normal_user_cannot_read_column_mappings(api, normal_user, unit):
-    res = login(api, normal_user).get(f"/api/units/{unit.id}/column-mappings/")
+def test_normal_user_can_read_but_not_change_column_mappings(api, normal_user, unit):
+    """업로드 화면의 컬럼 안내(specs/03 §2.2)를 위해 조회만 연다."""
+    client = login(api, normal_user)
 
+    assert client.get(f"/api/units/{unit.id}/column-mappings/").status_code == 200
+    res = client.put(f"/api/units/{unit.id}/column-mappings/", full_mapping_payload(), format="json")
     assert res.status_code == 403
 
 

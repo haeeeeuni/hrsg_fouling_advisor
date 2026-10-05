@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 
 import * as uploadsApi from '@/api/uploads'
+import ExpectedColumns from '@/components/upload/ExpectedColumns.vue'
 import FileDropzone from '@/components/upload/FileDropzone.vue'
 import NewUnitSetup from '@/components/upload/NewUnitSetup.vue'
 import ValidationReport from '@/components/upload/ValidationReport.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import { useJobPolling } from '@/composables/useJobPolling'
 import { useToast } from '@/composables/useToast'
 import { useUnitsStore } from '@/stores/units'
@@ -179,6 +181,9 @@ async function onCancel() {
       @select-ready="useReadyUnit"
     />
 
+    <!-- 호기 목록을 읽기 전에는 "업로드 가능한 호기가 없습니다" 가 잠깐 깜빡인다. 읽는 동안은 로딩만 보인다. -->
+    <LoadingSpinner v-else-if="!units.loaded" label="호기 목록을 불러오는 중" />
+
     <div v-else-if="!units.uploadableUnits.length" class="card">
       <div class="card-body">
         <EmptyState
@@ -246,6 +251,10 @@ async function onCancel() {
           </div>
         </div>
       </div>
+
+      <!-- 파일을 고르기 전에 헤더를 맞출 수 있게 보여준다. 적재가 막혔을 때도 남겨 둔다 —
+           컬럼명이 달라 막힌 경우 이 표가 바로 고칠 방법이다. -->
+      <ExpectedColumns v-if="!report || !report.is_loadable" :unit-id="units.selectedUnitId" />
 
       <div v-if="report" class="card mb-3">
         <div class="card-body">

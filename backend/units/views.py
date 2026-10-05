@@ -104,9 +104,16 @@ class UnitViewSet(AuditedModelMixin, viewsets.ModelViewSet):
 
 
 class ColumnMappingView(APIView):
-    """GET/PUT /api/units/{unit_id}/column-mappings/ (관리자)."""
+    """GET/PUT /api/units/{unit_id}/column-mappings/.
 
-    permission_classes = [IsAdminRole]
+    조회는 로그인 사용자 누구나 — 업로드 화면이 "이 호기가 기대하는 컬럼명" 을 보여줘야
+    사용자가 파일을 올리기 전에 헤더를 맞출 수 있다(specs/03 §2.2). 수정은 관리자 전용이다.
+    """
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsAuthenticated()]
+        return [IsAdminRole()]
 
     def get(self, request: Request, unit_id: int) -> Response:
         unit = _get_unit(unit_id)
