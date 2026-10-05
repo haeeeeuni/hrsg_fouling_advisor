@@ -60,6 +60,16 @@ async function run() {
   }
 }
 
+/**
+ * 회복률 표기. 서버는 계산할 수 없을 때 null 을 준다 — 공통 군집이 없거나(비교 불가)
+ * 세정 전 FI 가 0 이라 나눌 수 없을 때다(specs/12 §2.5). null 을 0 % 로 바꾸면
+ * "계산 불가" 가 "전혀 회복되지 않음" 으로 읽힌다.
+ */
+function recoveryText(report) {
+  if (report.recovery_ratio != null) return formatPercent(report.recovery_ratio * 100)
+  return report.is_comparable === false ? '비교 불가' : '계산 불가'
+}
+
 async function show(id) {
   const { data } = await maintenanceApi.fetchComparison(id)
   result.value = data
@@ -145,7 +155,10 @@ async function exportReport(format) {
             <p class="small">
               공통 군집 <code>{{ result.common_clusters.join(', ') }}</code> ·
               표본 전 {{ formatCount(result.metrics.n_before) }} / 후 {{ formatCount(result.metrics.n_after) }} ·
-              회복률 <strong>{{ formatPercent((result.recovery_ratio ?? 0) * 100) }}</strong>
+              회복률 <strong>{{ recoveryText(result) }}</strong>
+            </p>
+            <p v-if="result.recovery_ratio == null" class="small text-secondary">
+              세정 전 오염도 지수가 0 이라 회복률을 계산할 수 없습니다. 세정 전 구간에 오염이 관측되지 않았습니다.
             </p>
 
             <table class="table table-sm align-middle">
@@ -208,7 +221,7 @@ async function exportReport(format) {
                 <td class="small">{{ formatDate(row.created_at) }}</td>
                 <td class="small">{{ formatDate(row.cleaned_at) }}</td>
                 <td class="small">{{ row.common_clusters.join(', ') || '–' }}</td>
-                <td class="small text-end">{{ formatPercent((row.recovery_ratio ?? 0) * 100) }}</td>
+                <td class="small text-end" :class="{ 'text-secondary': row.recovery_ratio == null }">{{ recoveryText(row) }}</td>
                 <td class="text-end">
                   <button class="btn btn-sm btn-outline-secondary" @click="show(row.id)">보기</button>
                 </td>

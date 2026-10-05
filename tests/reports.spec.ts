@@ -109,3 +109,33 @@ test.describe(`리포트 ${MUTATES}`, () => {
     expect(head(path, 5)).toBe(PDF_MAGIC);
   });
 });
+
+test('회복률을 계산할 수 없는 비교는 0 % 가 아니라 "비교 불가/계산 불가" 로 보인다', async ({ page }) => {
+  // 서버는 공통 군집이 없거나 세정 전 FI 가 0 이면 recovery_ratio 를 null 로 준다(specs/12 §2.5).
+  // 화면이 null 을 0 % 로 바꿔 "회복이 전혀 안 됨" 처럼 보이던 문제의 회귀 테스트다. 데이터와 무관하게 응답을 주입한다.
+  const api = await Api.asAdmin();
+  const unit = rows(await api.get<any>('/api/units/?is_active=true'))[0];
+  await api.dispose();
+  test.skip(!unit, '활성 호기가 없다');
+
+  const base = { unit: unit.id, unit_code: unit.code, method_label: '드라이아이스', created_at: '2026-10-05T00:00:00+09:00',
+    cleaned_at: '2024-07-25T00:00:00+09:00', warnings: [], metrics: { rows: [], n_before: 0, n_after: 0 } };
+  const reports = [
+    { ...base, id: 9001, common_clusters: [], is_comparable: false, recovery_ratio: null },
+    { ...base, id: 9002, common_clusters: ['L3-SU'], is_comparable: true, recovery_ratio: null },
+    { ...base, id: 9003, common_clusters: ['L3-SU'], is_comparable: true, recovery_ratio: 0.5 },
+  ];
+  await page.route('**/api/cleaning-events/**', (route) =>
+    route.fulfill({ json: { count: 1, results: [{ id: 1, unit: unit.id, cleaned_at: base.cleaned_at, method_label: '드라이아이스' }] } }),
+  );
+  await page.route('**/api/comparisons/?**', (route) =>
+    route.fulfill({ json: { count: reports.length, next: null, previous: null, results: reports } }),
+  );
+
+  await page.goto('/comparison');
+  await selectUnit(page, unit.id);
+
+  const history = page.locator('table', { has: page.getByRole('columnheader', { name: '회복률' }) });
+  // 4번째 칸이 회복률이다. 값이 있는 행만 % 로 나온다.
+  await expect(history.locator('tbody tr td:nth-child(4)')).toHaveText(['비교 불가', '계산 불가', '50.0 %']);
+});
