@@ -1,4 +1,5 @@
 <script setup>
+import dayjs from 'dayjs'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -61,32 +62,37 @@ onMounted(async () => {
  * 겹치는 구간이 없어 INSUFFICIENT_DATA 로 실패한다. 사용자는 이유를 알 수 없다.
  * 그래서 적재 기간을 먼저 읽고, 그 안에서 최근 12개월을 고른다.
  */
+let rangeRequestSeq = 0
+
 async function applyDefaultRange() {
+  // 진입 직후 호기를 바꾸면 두 요청이 겹친다. 늦게 도착한 이전 호기의 응답이
+  // 새 호기의 기간을 덮어쓰지 않도록 마지막 요청의 응답만 반영한다.
+  const seq = ++rangeRequestSeq
   dataPeriod.value = null
   if (!units.selectedUnitId) return
 
   try {
     const { data } = await unitsApi.fetchDataSummary(units.selectedUnitId)
+    if (seq !== rangeRequestSeq) return
     const { start, end } = data?.period ?? {}
     if (start && end) {
-      dataPeriod.value = { start: start.slice(0, 10), end: end.slice(0, 10) }
-      const last = new Date(end)
-      const from = new Date(last)
-      from.setMonth(from.getMonth() - 12)
-      const first = new Date(start)
-      periodEnd.value = last.toISOString().slice(0, 10)
-      periodStart.value = (from < first ? first : from).toISOString().slice(0, 10)
+      // 서버는 UTC 시각을 준다. 앞 10자를 자르면 KST 00~09시가 전날로 밀려, 마지막 날 데이터가
+      // 분석에서 빠진다. 분석 요청은 KST 날짜로 보내므로(run) 같은 기준의 날짜로 바꾼다.
+      const first = dayjs(start)
+      const last = dayjs(end)
+      const from = last.subtract(12, 'month')
+      dataPeriod.value = { start: first.format('YYYY-MM-DD'), end: last.format('YYYY-MM-DD') }
+      periodEnd.value = last.format('YYYY-MM-DD')
+      periodStart.value = (from.isBefore(first) ? first : from).format('YYYY-MM-DD')
       return
     }
   } catch {
     // 요약을 못 읽어도 화면은 떠야 한다. 아래 기본값으로 떨어진다.
   }
 
-  const end = new Date()
-  const start = new Date(end)
-  start.setMonth(start.getMonth() - 12)
-  periodEnd.value = end.toISOString().slice(0, 10)
-  periodStart.value = start.toISOString().slice(0, 10)
+  const today = dayjs()
+  periodEnd.value = today.format('YYYY-MM-DD')
+  periodStart.value = today.subtract(12, 'month').format('YYYY-MM-DD')
 }
 
 // 호기를 바꾸면 그 호기의 적재 기간으로 다시 잡는다.
@@ -95,12 +101,11 @@ watch(() => units.selectedUnitId, applyDefaultRange)
 function applyQuickRange(months) {
   // 데이터가 있는 마지막 날을 기준으로 거슬러 올라간다. 오늘 기준이면
   // 과거 데이터만 있는 호기에서 빈 구간이 선택된다.
-  const end = dataPeriod.value ? new Date(dataPeriod.value.end) : new Date()
-  const start = new Date(end)
-  start.setMonth(start.getMonth() - months)
-  const first = dataPeriod.value ? new Date(dataPeriod.value.start) : null
-  periodEnd.value = end.toISOString().slice(0, 10)
-  periodStart.value = (first && start < first ? first : start).toISOString().slice(0, 10)
+  const end = dataPeriod.value ? dayjs(dataPeriod.value.end) : dayjs()
+  const start = end.subtract(months, 'month')
+  const first = dataPeriod.value ? dayjs(dataPeriod.value.start) : null
+  periodEnd.value = end.format('YYYY-MM-DD')
+  periodStart.value = (first && start.isBefore(first) ? first : start).format('YYYY-MM-DD')
 }
 
 async function run() {
