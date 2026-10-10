@@ -63,3 +63,24 @@ export async function ensureE2EData(admin: Api, unitId: number) {
   expect(commit.status(), await commit.text()).toBe(202);
   await admin.waitForJob((await commit.json()).job_id);
 }
+
+/**
+ * E2E 호기의 성공한 분석 id. 없으면 적재 기간 전체로 분석을 돌려 만든다.
+ * 분석 결과가 있어야 하는 화면(편익 재계산, 실행 이력 상세 등)의 준비 단계다.
+ */
+export async function ensureE2EAnalysis(admin: Api, unitId: number): Promise<number> {
+  const runs = rows(await admin.get<any>(`/api/analysis-runs/?unit_id=${unitId}&status=SUCCESS`));
+  if (runs.length) return runs[0].id;
+
+  await ensureE2EData(admin, unitId);
+  const { period } = await admin.get<any>(`/api/units/${unitId}/data-summary/`);
+  const res = await admin.post('/api/analysis-runs/', {
+    unit_id: unitId,
+    period_start: period.start,
+    period_end: period.end,
+  });
+  expect(res.status(), await res.text()).toBe(202);
+  const { job_id: jobId, analysis_run_id: runId } = await res.json();
+  await admin.waitForJob(jobId);
+  return runId;
+}

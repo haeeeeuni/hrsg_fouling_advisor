@@ -70,16 +70,11 @@ test.describe('호기 상태별 표시', () => {
 
   test.beforeAll(async () => {
     const api = await Api.asAdmin();
-    const active = rows(await api.get<any>('/api/units/?is_active=true')) as { id: number }[];
-    const runs = rows(await api.get<any>('/api/analysis-runs/?status=SUCCESS&page_size=200')) as any[];
+    const latest = await api.latestRunByActiveUnit();
     await api.dispose();
-    // 실행 이력은 최신순이다. 호기별 첫 번째가 대시보드에 보이는 결과다.
-    const latest = new Map<number, any>();
-    for (const r of runs) if (!latest.has(r.unit)) latest.set(r.unit, r);
-    for (const u of active) {
-      const run = latest.get(u.id);
-      if (!run) unanalyzedUnitId ??= u.id;
-      else byGrade[run.result_grade] ??= u.id;
+    for (const [unitId, run] of latest) {
+      if (!run) unanalyzedUnitId ??= unitId;
+      else byGrade[run.result_grade] ??= unitId;
     }
   });
 

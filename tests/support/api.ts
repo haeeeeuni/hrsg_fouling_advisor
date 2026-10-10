@@ -24,7 +24,10 @@ export class Api {
 
   /** 새로 로그인한 API 컨텍스트를 만든다. 관리자가 아닌 계정을 쓸 때만 필요하다. */
   static async login(creds: Credentials = ADMIN): Promise<Api> {
-    const ctx = await request.newContext({ baseURL: BASE_URL });
+    // 반드시 빈 쿠키로 시작한다. 테스트 안에서 만든 컨텍스트는 그 테스트의 storageState(관리자 세션)를
+    // 물려받는데, 그 상태로 다른 사용자가 로그인하면 Django 가 기존 세션을 폐기한다
+    // → 모든 테스트가 같이 쓰는 관리자 세션이 끊겨 이후 테스트가 전부 401 이 된다.
+    const ctx = await request.newContext({ baseURL: BASE_URL, storageState: { cookies: [], origins: [] } });
     const api = new Api(ctx);
     await ctx.get('/api/auth/csrf/');
     const res = await api.post('/api/auth/login/', {
@@ -91,12 +94,24 @@ export class Api {
 
   /**
    * 가장 최근 성공 분석이 있는 **활성** 호기 id. 없으면 null.
-   * 비활성 호기(예: 시나리오가 끝나며 끈 E2E 호기)는 내비바에서 고를 수 없으므로 뺀다.
+   * 비활성 호기(예: 테스트가 끝나며 끈 E2E 호기)는 내비바에서 고를 수 없으므로 뺀다.
+   * 전체 이력의 첫 페이지로 고르면 안 된다 — 테스트가 E2E 호기로 분석을 쌓으면 첫 페이지가
+   * 전부 비활성 호기 것이 되어 "분석된 호기 없음" 으로 잘못 판단한다. 호기별로 묻는다.
    */
   async latestAnalyzedUnitId(): Promise<number | null> {
-    const active = new Set(rows(await this.get<any>('/api/units/?is_active=true')).map((u: any) => u.id));
-    const runs = rows(await this.get<any>('/api/analysis-runs/?status=SUCCESS')) as { unit: number }[];
-    return runs.find((r) => active.has(r.unit))?.unit ?? null;
+    const latest = [...(await this.latestRunByActiveUnit()).entries()].filter(([, run]) => run);
+    latest.sort(([, a], [, b]) => (a.executed_at < b.executed_at ? 1 : -1));
+    return latest[0]?.[0] ?? null;
+  }
+
+  /** 활성 호기별 가장 최근 성공 분석(대시보드에 보이는 결과). 분석이 없는 호기는 null. */
+  async latestRunByActiveUnit(): Promise<Map<number, any | null>> {
+    const out = new Map<number, any | null>();
+    for (const unit of rows(await this.get<any>('/api/units/?is_active=true')) as any[]) {
+      const [run] = rows(await this.get<any>(`/api/analysis-runs/?unit_id=${unit.id}&status=SUCCESS&page_size=1`)) as any[];
+      out.set(unit.id, run ?? null);
+    }
+    return out;
   }
 }
 

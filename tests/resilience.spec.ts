@@ -93,10 +93,9 @@ test('대시보드가 결과를 못 읽으면 "분석 결과 없음" 이 아니�
 
 test('호기를 바꿨는데 새 호기 결과를 못 읽으면 이전 호기 결과를 남겨 두지 않는다', async ({ page }) => {
   const api = await Api.asAdmin();
-  const active = new Set(rows(await api.get<any>('/api/units/?is_active=true')).map((u: any) => u.id));
-  const runs = rows(await api.get<any>('/api/analysis-runs/?status=SUCCESS&page_size=200')) as any[];
+  const latest = await api.latestRunByActiveUnit();
   await api.dispose();
-  const analyzed = [...new Set(runs.map((r) => r.unit).filter((u) => active.has(u)))];
+  const analyzed = [...latest].filter(([, run]) => run).map(([unit]) => unit);
   test.skip(analyzed.length < 2, '분석이 있는 활성 호기가 2개 이상 필요하다');
   const [a, b] = analyzed;
 

@@ -32,7 +32,7 @@ export const E2E_MAPPING = [
 
 export function ensureSampleCsv(): string {
   const out = path.join(PATHS.data, 'e2e_unit.csv');
-  if (fs.existsSync(out)) return out;
+  if (fs.existsSync(out) && fs.existsSync(maintenancePath())) return out;
 
   fs.mkdirSync(PATHS.data, { recursive: true });
   execFileSync(
@@ -45,10 +45,22 @@ export function ensureSampleCsv(): string {
       '--cleanings', '2',
       '--seed', '7',
       '--out', out,
+      // 같은 시드로 정비 이력도 만든다. 운전 데이터의 세정 시점과 맞물린다(수세·드라이아이스 2건).
+      '--maintenance-out', maintenancePath(),
     ],
     { cwd: PATHS.backend, stdio: 'pipe' },
   );
   return out;
+}
+
+function maintenancePath(): string {
+  return path.join(PATHS.data, 'e2e_maintenance.csv');
+}
+
+/** 정비 이력 CSV (specs/17 §4.3). 세정 후보 2건이 들어 있다. */
+export function ensureMaintenanceCsv(): string {
+  ensureSampleCsv();
+  return maintenancePath();
 }
 
 /**

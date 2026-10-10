@@ -37,12 +37,14 @@ test.describe(`리포트 ${MUTATES}`, () => {
     const api = await Api.asAdmin();
     unitId = await api.latestAnalyzedUnitId();
     // 세정 전후 비교에는 세정 이력과 분석이 모두 있는 활성 호기가 필요하다.
-    const active = new Set(rows(await api.get<any>('/api/units/?is_active=true')).map((u: any) => u.id));
-    const analyzed = new Set(
-      (rows(await api.get<any>('/api/analysis-runs/?status=SUCCESS&page_size=200')) as any[]).map((r) => r.unit),
-    );
-    const events = rows(await api.get<any>('/api/cleaning-events/?page_size=200')) as any[];
-    eventUnitId = events.map((e) => e.unit).find((u) => active.has(u) && analyzed.has(u)) ?? null;
+    const latest = await api.latestRunByActiveUnit();
+    const analyzed = new Set([...latest].filter(([, run]) => run).map(([unit]) => unit));
+    for (const unit of analyzed) {
+      if (rows(await api.get<any>(`/api/cleaning-events/?unit_id=${unit}&page_size=1`)).length) {
+        eventUnitId = unit;
+        break;
+      }
+    }
     await api.dispose();
   });
 
@@ -92,8 +94,6 @@ test.describe(`리포트 ${MUTATES}`, () => {
     await expect(page.getByRole('button', { name: 'PDF 다운로드' })).toBeEnabled();
   });
 
-  test('세정 전후 비교를 만들고 결과를 PDF 로 내려받는다', async ({ page }) => {
-    test.skip(eventUnitId === null, '세정 이력과 분석이 모두 있는 활성 호기가 없다');
   test('리포트 화면의 PDF 버튼은 생성 중임을 보여주고 PDF 를 내려받는다', async ({ page }) => {
     test.skip(unitId === null, '성공한 분석이 있는 호기가 없다');
     await page.goto('/reports');
@@ -114,6 +114,8 @@ test.describe(`리포트 ${MUTATES}`, () => {
     await expect(firstRow.getByRole('button', { name: 'PDF', exact: true })).toBeEnabled();
   });
 
+  test('세정 전후 비교를 만들고 결과를 PDF 로 내려받는다', async ({ page }) => {
+    test.skip(eventUnitId === null, '세정 이력과 분석이 모두 있는 활성 호기가 없다');
     await page.goto('/comparison');
     await selectUnit(page, eventUnitId!);
 
