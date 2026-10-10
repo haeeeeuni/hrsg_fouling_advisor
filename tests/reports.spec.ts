@@ -94,6 +94,26 @@ test.describe(`리포트 ${MUTATES}`, () => {
 
   test('세정 전후 비교를 만들고 결과를 PDF 로 내려받는다', async ({ page }) => {
     test.skip(eventUnitId === null, '세정 이력과 분석이 모두 있는 활성 호기가 없다');
+  test('리포트 화면의 PDF 버튼은 생성 중임을 보여주고 PDF 를 내려받는다', async ({ page }) => {
+    test.skip(unitId === null, '성공한 분석이 있는 호기가 없다');
+    await page.goto('/reports');
+    // 느린 서버(Render 무료 CPU)를 흉내 내 "생성 중" 상태를 관찰한다. 표시가 없으면 멈춘 것처럼 보인다.
+    await page.route('**/api/analysis-runs/*/export/', async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
+    const firstRow = page.locator('table').first().locator('tbody tr').first();
+
+    const { download, path } = await saveDownload(page, async () => {
+      await firstRow.getByRole('button', { name: 'PDF', exact: true }).click();
+      await expect(firstRow.getByRole('button', { name: '생성 중' })).toBeVisible();
+    });
+
+    expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+    expect(head(path, 5)).toBe(PDF_MAGIC);
+    await expect(firstRow.getByRole('button', { name: 'PDF', exact: true })).toBeEnabled();
+  });
+
     await page.goto('/comparison');
     await selectUnit(page, eventUnitId!);
 

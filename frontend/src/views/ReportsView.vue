@@ -11,6 +11,8 @@ const toast = useToast()
 const reports = ref([])
 const runs = ref([])
 const busy = ref(false)
+// 어느 버튼을 눌렀는지. 생성 중 표시가 없으면 느린 서버에서 화면이 멈춘 것처럼 보인다.
+const pending = ref(null)
 
 onMounted(async () => {
   await Promise.all([loadReports(), loadRuns()])
@@ -28,6 +30,7 @@ async function loadRuns() {
 
 async function generate(runId, format) {
   busy.value = true
+  pending.value = `${runId}:${format}`
   try {
     const { data } = await reportsApi.exportAnalysis(runId, format)
     await reportsApi.downloadReport(data.id, data.file_name)
@@ -37,6 +40,7 @@ async function generate(runId, format) {
     toast.push(err.parsed?.message ?? '리포트 생성에 실패했습니다.', 'danger')
   } finally {
     busy.value = false
+    pending.value = null
   }
 }
 
@@ -79,10 +83,14 @@ async function download(report) {
               </td>
               <td class="small text-end">{{ run.result_fi?.toFixed(1) ?? '–' }}</td>
               <td class="text-end">
-                <button class="btn btn-sm btn-outline-secondary me-1" :disabled="busy"
-                        @click="generate(run.id, 'pdf')">PDF</button>
-                <button class="btn btn-sm btn-outline-secondary" :disabled="busy"
-                        @click="generate(run.id, 'xlsx')">엑셀</button>
+                <button v-for="[format, label] in [['pdf', 'PDF'], ['xlsx', '엑셀']]" :key="format"
+                        class="btn btn-sm btn-outline-secondary ms-1" :disabled="busy"
+                        @click="generate(run.id, format)">
+                  <template v-if="pending === `${run.id}:${format}`">
+                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>생성 중
+                  </template>
+                  <template v-else>{{ label }}</template>
+                </button>
               </td>
             </tr>
           </tbody>

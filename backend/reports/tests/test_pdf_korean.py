@@ -159,3 +159,28 @@ def test_charts_use_bundled_font_not_system(caplog):
 
     # font_properties 는 파일 경로 기반이라 항상 동봉 폰트를 가리킨다.
     assert Path(fonts.font_properties().get_file()) == fonts.REGULAR_PATH
+
+
+def test_measured_vs_expected_uses_a_date_axis(monkeypatch):
+    """날짜 문자열을 범주형 축으로 그리면 날짜마다 눈금이 생겨(24개월이면 700여 개)
+    PDF 생성이 수 배 느려지고 x축 라벨이 겹쳐 읽을 수 없었다 — 회귀 테스트."""
+    from datetime import date, timedelta
+
+    captured = {}
+    real_subplots = charts.plt.subplots
+
+    def spy(*args, **kwargs):
+        fig, ax = real_subplots(*args, **kwargs)
+        captured["ax"] = ax
+        return fig, ax
+
+    monkeypatch.setattr(charts.plt, "subplots", spy)
+    start = date(2023, 1, 1)
+    points = [
+        {"date": (start + timedelta(days=i)).isoformat(), "measured_dp": 2.0, "expected_dp": 1.9}
+        for i in range(700)
+    ]
+
+    charts.measured_vs_expected(points, "dp")
+
+    assert len(captured["ax"].get_xticks()) < 30

@@ -115,7 +115,9 @@ def measured_vs_expected(points: list[dict[str, Any]], target: str) -> bytes:
             "expected_st",
         )
 
-    dates = [p["date"] for p in points]
+    # 문자열 그대로 넘기면 matplotlib 이 범주형 축으로 그려 날짜마다 눈금을 만든다(24개월이면 700여 개).
+    # 눈금 생성이 PDF 생성 시간의 대부분을 먹고 라벨도 겹쳐 읽을 수 없었다. 날짜 축으로 그린다.
+    dates = _as_dates([p["date"] for p in points])
     fig, ax = plt.subplots(figsize=(9, 2.6))
     ax.plot(
         dates, [p.get(measured_key) for p in points], color="#0d6efd", linewidth=1.4, label="실측"

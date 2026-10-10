@@ -58,3 +58,11 @@ def test_zero_is_distinguished_from_missing():
     assert fmt.fi(0) == "0.0"
     assert fmt.fi(None) == fmt.EMPTY
     assert fmt.currency(0) == "0 원"
+
+
+def test_ymd_uses_kst_date_for_aware_datetimes():
+    """DB 시각(UTC)을 그대로 자르면 KST 00~09시가 전날로 찍힌다 — 리포트 표지·파일명 회귀."""
+    from datetime import timezone as dt_timezone
+
+    kst_new_year_midnight = datetime(2022, 12, 31, 15, 0, tzinfo=dt_timezone.utc)
+    assert fmt.ymd(kst_new_year_midnight) == "2023-01-01"

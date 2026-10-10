@@ -62,7 +62,14 @@ def count(value) -> str:
 def ymd(value) -> str:
     if _blank(value):
         return EMPTY
-    if isinstance(value, datetime | date):
+    if isinstance(value, datetime):
+        from django.utils import timezone
+
+        # DB 의 시각은 UTC 다. 그대로 날짜를 뽑으면 KST 00~09시가 전날이 된다
+        # (KST 2023-01-01 00:00 시작 분석이 표지·파일명에 2022-12-31 로 찍혔다).
+        local = timezone.localtime(value) if timezone.is_aware(value) else value
+        return local.strftime("%Y-%m-%d")
+    if isinstance(value, date):
         return value.strftime("%Y-%m-%d")
     return str(value)[:10]
 
