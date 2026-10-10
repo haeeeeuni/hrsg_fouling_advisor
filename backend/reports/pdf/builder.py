@@ -227,8 +227,8 @@ class PdfReportBuilder:
             [
                 ("추세 모델", trend.get("model_type") or fmt.EMPTY),
                 ("상태", fmt.trend_status(trend.get("status"))),
-                ("진행률", f"{(trend.get('slope_per_day') or 0):.4f} FI/일"),
-                ("주간 증가량", f"{(trend.get('weekly_increase') or 0):.2f} FI/주"),
+                ("진행률", f"{(trend.get('slope_per_day') or 0):.4f}포인트/일"),
+                ("주간 증가량", f"{(trend.get('weekly_increase') or 0):.2f}포인트/주"),
                 (
                     "적합 구간",
                     f"{fmt.ymd(trend.get('fit_start'))} ~ {fmt.ymd(trend.get('fit_end'))}",
@@ -373,10 +373,10 @@ class PdfReportBuilder:
         self.table(
             [
                 ["용어", "설명"],
-                ["오염도 지수 (FI)", "실측과 기대값의 편차를 0~100으로 환산한 지수"],
+                ["오염도 지수", "실측과 기대값의 편차를 0~100으로 환산한 지수. 청정 기준 기간 대비 상대값이라 호기끼리 직접 비교하지 않는다"],
                 ["잔차", "실측값 − 기대값. 오염의 직접 신호"],
                 ["청정 기준 기간", "세정 직후 오염이 없다고 보는 구간. 기대값 모델 학습 구간"],
-                ["D-day", "FI 추세가 임계치에 도달할 것으로 예측되는 날까지 남은 일수"],
+                ["D-day", "오염도 지수 추세가 임계치에 도달할 것으로 예측되는 날까지 남은 일수"],
                 ["군집", "부하대 × 계절. 같은 조건끼리 비교하기 위한 구분"],
             ],
             [CONTENT_WIDTH * 0.28, CONTENT_WIDTH * 0.72],

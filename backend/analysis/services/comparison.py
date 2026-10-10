@@ -18,7 +18,7 @@ import pandas as pd
 
 # 비교 지표 정의: (키, 라벨, 컬럼, 소수자리, 개선율 표기 여부)
 METRICS: tuple[tuple[str, str, str, int, bool], ...] = (
-    ("fi", "오염도 지수 FI", "fi", 1, True),
+    ("fi", "오염도 지수", "fi", 1, True),
     ("dp", "평균 차압 (kPa)", "measured_dp", 2, True),
     ("residual_dp", "차압 잔차 (kPa)", "residual_dp", 2, False),
     ("stack", "평균 스택온도 (℃)", "measured_st", 1, True),

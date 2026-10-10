@@ -709,7 +709,7 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         TYPE_JSON,
         CAT_FOULING,
         "추세 회귀 신뢰도 가중치",
-        description="FI 일자별 신뢰도에 곱하는 회귀 가중치(specs/08 §4).",
+        description="오염도 지수 일자별 신뢰도에 곱하는 회귀 가중치(specs/08 §4).",
     ),
     SettingDef(
         "sensitivity_delta_pct",
@@ -807,7 +807,7 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         TYPE_FLOAT,
         CAT_FOULING,
         "오염도 임계치",
-        description="세정 권고 기준이 되는 FI 값",
+        description="세정 권고 기준이 되는 오염도 지수 값",
         min_value=0,
         max_value=100,
     ),

@@ -117,7 +117,7 @@ def test_comparison_section_is_rendered(comparison_context):
     text = extract(build_analysis_pdf(comparison_context))
 
     assert "세정 전후 비교" in text
-    assert "오염도 지수 FI" in text
+    assert "오염도 지수" in text
     assert "잔차 기반 지표가 주 지표" in text
 
 

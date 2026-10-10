@@ -89,7 +89,7 @@ def fouling_trend(
         )
 
     ax.set_ylim(0, 100)
-    _apply_font(ax, "오염도 지수(FI) 시계열", "날짜", "FI")
+    _apply_font(ax, "오염도 지수 시계열", "날짜", "오염도 지수")
     ax.legend(prop=fp, fontsize=8, loc="upper left")
     fig.autofmt_xdate()
     return _finish(fig)
@@ -182,7 +182,7 @@ def comparison_bars(cluster_metrics: list[dict[str, Any]], metric_key: str) -> b
     title = {
         "residual_dp": "군집별 차압 잔차",
         "residual_st": "군집별 스택온도 잔차",
-        "fi": "군집별 FI",
+        "fi": "군집별 오염도 지수",
     }
     _apply_font(ax, title.get(metric_key, metric_key), "군집", "")
     return _finish(fig)

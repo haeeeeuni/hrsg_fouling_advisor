@@ -252,8 +252,8 @@ watch(
             :trend="trend"
           />
           <p v-if="trend?.status === 'OK'" class="small text-secondary mt-2 mb-0">
-            {{ trend.model_type }} 모델 · 진행률 {{ trend.slope_per_day?.toFixed(3) }} FI/일
-            (주간 {{ trend.weekly_increase?.toFixed(2) }}) · R² {{ trend.r2?.toFixed(3) }}
+            {{ trend.model_type }} 모델 · 진행률 {{ trend.slope_per_day?.toFixed(3) }}포인트/일
+            (주간 {{ trend.weekly_increase?.toFixed(2) }}포인트) · R² {{ trend.r2?.toFixed(3) }}
             <template v-if="trend.caution_eta_date">
               · 주의 전환 {{ formatDate(trend.caution_eta_date) }}
             </template>

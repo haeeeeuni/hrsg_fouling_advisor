@@ -77,7 +77,7 @@ onMounted(load)
         <h2 class="h5 mb-1">호기 간 오염도 비교</h2>
         <p class="text-muted small mb-0">
           각 호기의 최신 성공 분석을 기준으로 세정 우선순위를 매깁니다. 설비마다 절대값이 다르므로
-          FI와 잔차 기반 지표만 비교합니다.
+          오염도 지수와 잔차 기반 지표만 비교합니다.
         </p>
       </div>
       <button class="btn btn-sm btn-outline-secondary" type="button" @click="load">새로고침</button>
@@ -112,9 +112,9 @@ onMounted(load)
           <tr>
             <th scope="col">순위</th>
             <th scope="col">호기</th>
-            <th scope="col" class="text-end">오염도(FI)</th>
+            <th scope="col" class="text-end">오염도 지수</th>
             <th scope="col">등급</th>
-            <th scope="col" class="text-end">진행률(FI/일)</th>
+            <th scope="col" class="text-end">진행률(포인트/일)</th>
             <th scope="col" class="text-end">일일 손실</th>
             <th scope="col" class="text-end">D-day</th>
             <th scope="col">도달 예상일</th>

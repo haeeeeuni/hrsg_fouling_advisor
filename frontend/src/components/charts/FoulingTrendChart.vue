@@ -154,7 +154,7 @@ const options = computed(() => ({
   interaction: { mode: 'index', intersect: false },
   scales: {
     x: { type: 'time', time: { unit: 'month' }, title: { display: true, text: '날짜' } },
-    y: { min: 0, max: 100, title: { display: true, text: 'FI' } },
+    y: { min: 0, max: 100, title: { display: true, text: '오염도 지수' } },
   },
   plugins: {
     legend: { display: true, position: 'bottom', labels: { boxWidth: 18 } },
@@ -171,7 +171,7 @@ const options = computed(() => ({
           const point = props.points[ctx.dataIndex]
           const grade = GRADE[point?.grade]?.label ?? '–'
           return [
-            `FI ${ctx.parsed.y?.toFixed(1)} (${grade})`,
+            `오염도 지수 ${ctx.parsed.y?.toFixed(1)} (${grade})`,
             `표본 ${point?.sample_count?.toLocaleString('ko-KR') ?? '–'}`,
           ]
         },
@@ -193,7 +193,7 @@ const options = computed(() => ({
       <div class="table-responsive mt-2" style="max-height: 240px">
         <table class="table table-sm">
           <thead>
-            <tr><th scope="col">일자</th><th scope="col" class="text-end">FI</th><th scope="col">등급</th><th scope="col" class="text-end">표본</th></tr>
+            <tr><th scope="col">일자</th><th scope="col" class="text-end">오염도 지수</th><th scope="col">등급</th><th scope="col" class="text-end">표본</th></tr>
           </thead>
           <tbody>
             <tr v-for="p in points" :key="p.date">

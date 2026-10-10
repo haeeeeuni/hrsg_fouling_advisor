@@ -427,7 +427,7 @@ def _append_sanity_warnings(
             {
                 "code": "FI_SATURATED",
                 "message": (
-                    "FI가 장기간 100에 고정되어 있습니다. "
+                    "오염도 지수가 장기간 100에 고정되어 있습니다. "
                     "정규화 기준값(sigma_ref / dp_ref_pct)이 과소 설정되었을 수 있습니다."
                 ),
                 "details": {"saturated_ratio": round(float(saturated), 4)},

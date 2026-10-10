@@ -54,7 +54,7 @@ const options = computed(() => ({
   interaction: { mode: 'index', intersect: false },
   scales: {
     x: { type: 'time', time: { unit: 'month' }, title: { display: true, text: '날짜' } },
-    y: { min: 0, max: 100, title: { display: true, text: 'FI' } },
+    y: { min: 0, max: 100, title: { display: true, text: '오염도 지수' } },
   },
   plugins: {
     legend: { display: true, position: 'bottom', labels: { boxWidth: 18 } },

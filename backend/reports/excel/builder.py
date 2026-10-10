@@ -100,7 +100,7 @@ def build_analysis_xlsx(context: dict[str, Any]) -> bytes:
     fi_sheet = _write_sheet(
         workbook,
         "오염도지수",
-        ["일자", "FI", "등급", "표본 수", "신뢰도"],
+        ["일자", "오염도 지수", "등급", "표본 수", "신뢰도"],
         [
             [
                 fmt.ymd(p["date"]),
@@ -116,7 +116,7 @@ def build_analysis_xlsx(context: dict[str, Any]) -> bytes:
     if len(points) > 1:
         chart = LineChart()
         chart.title = "오염도 지수 시계열"
-        chart.y_axis.title = "FI"
+        chart.y_axis.title = "오염도 지수"
         chart.x_axis.title = "일자"
         chart.height, chart.width = 8, 22
         chart.add_data(
@@ -267,7 +267,7 @@ def build_analysis_xlsx(context: dict[str, Any]) -> bytes:
             ["상태", fmt.trend_status(trend.get("status"))],
             ["적합 시작", fmt.ymd(trend.get("fit_start"))],
             ["적합 종료", fmt.ymd(trend.get("fit_end"))],
-            ["진행률(FI/일)", trend.get("slope_per_day")],
+            ["진행률(포인트/일)", trend.get("slope_per_day")],
             ["주간 증가량", trend.get("weekly_increase")],
             ["R²", trend.get("r2")],
             ["MAE", trend.get("mae")],

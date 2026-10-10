@@ -184,7 +184,7 @@ def comparison_context(context):
                 "rows": [
                     {
                         "key": "fi",
-                        "label": "오염도 지수 FI",
+                        "label": "오염도 지수",
                         "before": 81.4,
                         "after": 4.2,
                         "delta": -77.2,

@@ -218,7 +218,7 @@ def _fill_actual_fi(unit: Unit, cases: list, warnings: list[dict]) -> None:
         warnings.append(
             {
                 "code": "NO_FULL_RUN",
-                "message": "전체 기간 분석 결과가 없어 실제 세정 시점의 FI를 채우지 못했습니다.",
+                "message": "전체 기간 분석 결과가 없어 실제 세정 시점의 오염도 지수를 채우지 못했습니다.",
             }
         )
         return

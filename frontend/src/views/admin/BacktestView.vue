@@ -201,10 +201,10 @@ watch(selectedUnitId, load)
             <tr>
               <th scope="col">실제 세정일</th>
               <th scope="col">컷오프</th>
-              <th scope="col" class="text-end">컷오프 시점 FI</th>
+              <th scope="col" class="text-end">컷오프 시점 오염도 지수</th>
               <th scope="col">예측 도달일</th>
               <th scope="col" class="text-end">오차(일)</th>
-              <th scope="col" class="text-end">실제 세정 시 FI</th>
+              <th scope="col" class="text-end">실제 세정 시 오염도 지수</th>
               <th scope="col" class="text-end">예측 Δ차압</th>
               <th scope="col">비고</th>
             </tr>

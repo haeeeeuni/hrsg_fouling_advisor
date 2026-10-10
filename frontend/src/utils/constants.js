@@ -1,8 +1,8 @@
 /** 등급 표현 (specs/16 §8). 색상만으로 정보를 전달하지 않고 항상 라벨을 함께 쓴다. */
 export const GRADE = {
-  NORMAL: { label: '정상', variant: 'success', range: 'FI < 30' },
-  CAUTION: { label: '주의', variant: 'warning', range: '30 ≤ FI < 60' },
-  WARNING: { label: '경고', variant: 'danger', range: 'FI ≥ 60' },
+  NORMAL: { label: '정상', variant: 'success', range: '오염도 지수 < 30' },
+  CAUTION: { label: '주의', variant: 'warning', range: '30 ≤ 오염도 지수 < 60' },
+  WARNING: { label: '경고', variant: 'danger', range: '오염도 지수 ≥ 60' },
 }
 
 export const ROLE = {

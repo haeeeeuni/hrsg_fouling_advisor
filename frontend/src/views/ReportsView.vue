@@ -66,7 +66,7 @@ async function download(report) {
               <th scope="col">분석 일시</th>
               <th scope="col">호기</th>
               <th scope="col">데이터 기간</th>
-              <th scope="col" class="text-end">FI</th>
+              <th scope="col" class="text-end">오염도 지수</th>
               <th scope="col"></th>
             </tr>
           </thead>

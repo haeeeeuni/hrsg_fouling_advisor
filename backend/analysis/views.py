@@ -270,7 +270,7 @@ class AnalysisRunViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet
             "실행자",
             "데이터 시작",
             "데이터 종료",
-            "FI",
+            "오염도 지수",
             "등급",
             "신뢰도",
             "D-day",
