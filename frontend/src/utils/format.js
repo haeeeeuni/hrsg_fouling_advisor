@@ -72,3 +72,31 @@ export function formatCount(value) {
   if (isBlank(value)) return EMPTY
   return withThousands(value)
 }
+
+/** 계산 결과가 없을 때(null) — 0 과 구분한다(specs/11 §7). `?? 0` 을 쓰지 않는다. */
+export const NOT_COMPUTABLE = '계산 불가'
+
+/**
+ * 큰 금액을 읽기 쉽게: `5.92억 원`, `592만 원`, `8,000 원`.
+ * 계산기의 큰 숫자(specs/12 UI-3)에 쓴다. 정확한 값은 formatCurrency 로 함께 보여 준다.
+ */
+export function formatWonShort(value) {
+  if (isBlank(value)) return NOT_COMPUTABLE
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '−' : ''
+  if (abs >= 1e8) return `${sign}${fixed(abs / 1e8, 2)}억 원`
+  if (abs >= 1e4) return `${sign}${withThousands(Math.round(abs / 1e4))}만 원`
+  return `${sign}${withThousands(Math.round(abs))} 원`
+}
+
+/** 회수 기간: 회수 효과가 없으면 서버가 null 을 준다 → `회수 불가`. */
+export function formatPayback(days) {
+  if (isBlank(days)) return '회수 불가'
+  return `${withThousands(Math.round(days))}일`
+}
+
+/** 손실 출력 등 작은 MW: 소수 2자리 → `2.32 MW` */
+export function formatMw(value) {
+  if (isBlank(value)) return NOT_COMPUTABLE
+  return `${fixed(value, 2)} MW`
+}

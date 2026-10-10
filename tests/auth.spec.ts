@@ -124,8 +124,8 @@ test.describe('관리자', () => {
     for (const title of ['질의응답', '계산기', '플랜트 데이터 요청 체크리스트']) {
       await expect(page.getByRole('link', { name: new RegExp(title) }).first()).toBeVisible();
     }
-    await page.getByRole('main').getByRole('link', { name: /계산기/ }).click();
-    await expect(page).toHaveURL(/\/calculator$/);
+    await page.getByRole('main').getByRole('link', { name: /체크리스트/ }).click();
+    await expect(page).toHaveURL(/\/checklist$/);
     await expect(page.getByText('준비 중인 기능입니다')).toBeVisible();
   });
 });

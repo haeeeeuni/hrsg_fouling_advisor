@@ -2,14 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 현재 상태 — N1(기반 전환) 완료
+## 현재 상태 — N2(계산기 + 참조 데이터) 완료
 
 - 2026-10-10 요구사항이 바뀌어 "HRSG Fouling Advisor"(운전 시계열 → 오염도 지수·D-day)에서
   **"HRSG 레퍼런스 앱"**(질의응답 · 계산기 · 플랜트 데이터 요청 체크리스트)으로 전환 중이다.
 - 명세 `specs/00~14` 확정(N0). **N1 완료**(브랜치 `feat/reference-app`): 이전 앱 코드 제거, 회원가입·승인·ID 로그인,
   `Setting` 의 `common` 이전, pgvector 확장, 소개·홈·헤더 로그인·라이트/다크·모바일, 관리자 모드(개요·가입 승인·사용자·설정·감사 로그).
-  질의응답·계산기·체크리스트는 "준비 중" 화면이다. 다음은 **N2(계산기 + 참조 데이터)**.
-- 백엔드 앱은 `accounts`·`common` 둘뿐이다. 새 앱은 마일스톤마다 추가하고 `pytest.ini` testpaths·`pyproject` 도 함께 갱신한다.
+  **N2 완료**: `reference`(GT 한계표·공법·SMP·버전 있는 파라미터 세트, 전부 `[임시값]` 시드)와 `calculator`(순수 함수 +
+  `runner.py`), 계산기 3탭(게이지·HRSG 도식·차트·URL 복원), 관리자 참조 데이터 4화면. 질의응답·체크리스트는 "준비 중"이다.
+  다음은 **N3(체크리스트)**.
+- 백엔드 앱: `accounts`·`common`·`reference`·`calculator`. 새 앱은 마일스톤마다 추가하고 `pytest.ini` testpaths·`pyproject` 도 함께 갱신한다.
+- **계산 응답은 `calculator/runner.py` 한 곳에서 조립한다.** 뷰와 챗봇 도구(N5)가 같은 함수를 부르게 하려는 것이다.
+  응답에 계수·한계값 원본을 넣지 않는다 — `calculator/tests/test_api.py` 가 응답 JSON 에 비밀 키가 없는지 검사한다.
+  관리자 파라미터 화면은 항목 정의를 API(`definitions`)로 받아 그려서 프론트 번들에도 계수 이름이 없다(빌드 산출물에서 확인).
 - 이전 앱 코드는 로컬 태그 `v1-fouling-advisor`(`3a925ca`), 이전 로컬 DB 는 `~/backups/hrsg/` 덤프에 있다.
   이전 앱 명세는 `specs/archive/v1-fouling-advisor/` — **새 기능을 구현할 때 정본으로 읽지 않는다.**
 

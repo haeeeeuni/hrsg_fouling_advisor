@@ -10,6 +10,8 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/admin/", include("accounts.urls_admin")),
     path("api/admin/", include("common.urls_admin")),
+    path("api/admin/", include("reference.urls")),
+    path("api/calculator/", include("calculator.urls")),
     path("api/", include("common.urls")),
 ]
 

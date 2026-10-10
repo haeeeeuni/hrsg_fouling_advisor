@@ -6,13 +6,21 @@ import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
 import { FEATURES } from '@/utils/constants'
 
+/** 구현된 기능 화면. 나머지 기능은 해당 마일스톤 전까지 준비 중 안내를 보인다. */
+const IMPLEMENTED = {
+  calculator: {
+    path: '/calculator/:tab(methods|pinch)?',
+    component: () => import('@/views/CalculatorView.vue'),
+  },
+}
+
 const featureRoutes = FEATURES.map((feature) => ({
-  // 기능 화면은 해당 마일스톤에서 실제 화면으로 바뀐다. 그 전까지는 준비 중 안내를 보인다.
   path: `/${feature.key}/:rest(.*)*`,
   name: feature.route,
   component: () => import('@/views/ComingSoonView.vue'),
   props: { feature },
   meta: { requiresAuth: true, title: feature.title },
+  ...(IMPLEMENTED[feature.key] ? { ...IMPLEMENTED[feature.key], props: false } : {}),
 }))
 
 /** 관리자 모드 메뉴 (specs/08 §2). 마일스톤마다 메뉴가 늘어난다. AdminLayout 이 이 목록으로 사이드바를 그린다. */
@@ -20,6 +28,10 @@ export const ADMIN_MENU = [
   { path: '', name: 'admin-overview', title: '개요', icon: 'bi-speedometer2', view: 'OverviewView' },
   { path: 'signups', name: 'admin-signups', title: '가입 승인', icon: 'bi-person-check', view: 'SignupApprovalsView' },
   { path: 'users', name: 'admin-users', title: '사용자', icon: 'bi-people', view: 'UsersView' },
+  { path: 'gt-models', name: 'admin-gt-models', title: 'GT 운전 한계', icon: 'bi-fan', view: 'GtModelsView' },
+  { path: 'cleaning-methods', name: 'admin-cleaning-methods', title: '세정 공법', icon: 'bi-droplet', view: 'CleaningMethodsView' },
+  { path: 'smp', name: 'admin-smp', title: 'SMP', icon: 'bi-currency-exchange', view: 'SmpView' },
+  { path: 'calc-parameters', name: 'admin-calc-parameters', title: '계산 파라미터', icon: 'bi-calculator', view: 'CalcParametersView' },
   { path: 'settings', name: 'admin-settings', title: '설정', icon: 'bi-sliders', view: 'SettingsView' },
   { path: 'audit-logs', name: 'admin-audit-logs', title: '감사 로그', icon: 'bi-journal-text', view: 'AuditLogView' },
 ]
@@ -29,6 +41,10 @@ const ADMIN_VIEWS = {
   OverviewView: () => import('@/views/admin/OverviewView.vue'),
   SignupApprovalsView: () => import('@/views/admin/SignupApprovalsView.vue'),
   UsersView: () => import('@/views/admin/UsersView.vue'),
+  GtModelsView: () => import('@/views/admin/GtModelsView.vue'),
+  CleaningMethodsView: () => import('@/views/admin/CleaningMethodsView.vue'),
+  SmpView: () => import('@/views/admin/SmpView.vue'),
+  CalcParametersView: () => import('@/views/admin/CalcParametersView.vue'),
   SettingsView: () => import('@/views/admin/SettingsView.vue'),
   AuditLogView: () => import('@/views/admin/AuditLogView.vue'),
 }

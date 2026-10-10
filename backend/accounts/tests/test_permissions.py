@@ -12,6 +12,10 @@ USER_ENDPOINTS = [
     ("patch", "/api/auth/me/"),
     ("post", "/api/auth/password/"),
     ("get", "/api/jobs/some-job-id/"),
+    ("get", "/api/calculator/options/"),
+    ("post", "/api/calculator/loss/"),
+    ("post", "/api/calculator/methods/"),
+    ("post", "/api/calculator/pinch-approach/"),
 ]
 
 # (메서드, 경로) — 관리자만. {pk} 는 존재하는 사용자로 바뀐다.
@@ -29,6 +33,17 @@ ADMIN_ENDPOINTS = [
     ("get", "/api/admin/settings/"),
     ("patch", "/api/admin/settings/"),
     ("post", "/api/admin/settings/login_max_failures/reset/"),
+    ("get", "/api/admin/gt-models/"),
+    ("post", "/api/admin/gt-models/"),
+    ("get", "/api/admin/gt-models/template/"),
+    ("post", "/api/admin/gt-models/import/"),
+    ("get", "/api/admin/cleaning-methods/"),
+    ("post", "/api/admin/cleaning-methods/"),
+    ("get", "/api/admin/smp-prices/"),
+    ("post", "/api/admin/smp-prices/"),
+    ("get", "/api/admin/calc-parameter-sets/"),
+    ("post", "/api/admin/calc-parameter-sets/"),
+    ("post", "/api/admin/calc-parameter-sets/preview/"),
 ]
 
 PUBLIC_ENDPOINTS = [

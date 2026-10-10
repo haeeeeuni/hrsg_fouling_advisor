@@ -8,8 +8,18 @@ import { BASE_URL, VIEWPORTS } from './support/env';
 import { expectNoHorizontalScroll, useTheme } from './support/ui';
 
 const PUBLIC_PAGES = ['/', '/signup'];
-const USER_PAGES = ['/home', '/profile', '/chat', '/calculator', '/checklist'];
-const ADMIN_PAGES = ['/admin', '/admin/signups', '/admin/users', '/admin/settings', '/admin/audit-logs'];
+const USER_PAGES = ['/home', '/profile', '/chat', '/calculator', '/calculator/methods', '/calculator/pinch?ps=120,338,318,,', '/checklist'];
+const ADMIN_PAGES = [
+  '/admin',
+  '/admin/signups',
+  '/admin/users',
+  '/admin/gt-models',
+  '/admin/cleaning-methods',
+  '/admin/smp',
+  '/admin/calc-parameters',
+  '/admin/settings',
+  '/admin/audit-logs',
+];
 
 for (const [device, viewport] of Object.entries(VIEWPORTS)) {
   for (const theme of ['light', 'dark'] as const) {

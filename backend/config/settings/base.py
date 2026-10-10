@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "common",
     "accounts",
+    "reference",
+    "calculator",
 ]
 
 MIDDLEWARE = [

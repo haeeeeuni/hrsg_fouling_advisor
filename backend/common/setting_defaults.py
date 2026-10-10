@@ -79,6 +79,15 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         min_value=1,
         max_value=1440,
     ),
+    # --- N2: 계산기 (specs/05 §3.1) ---
+    SettingDef(
+        key="calc_default_method",
+        default="드라이아이스 세정",
+        value_type=TYPE_STRING,
+        category=CAT_CALC,
+        label="기본 세정 공법",
+        description="계산기를 열 때 처음 선택되는 공법 이름. 없거나 비활성이면 첫 공법을 쓴다.",
+    ),
 )
 
 SETTING_DEF_BY_KEY: dict[str, SettingDef] = {d.key: d for d in SETTING_DEFS}

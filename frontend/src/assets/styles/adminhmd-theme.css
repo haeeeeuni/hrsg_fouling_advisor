@@ -654,3 +654,128 @@ h6 {
 .dropdown-item:hover {
   background-color: var(--admin-surface-soft);
 }
+
+/* -------------------------------------------------- 계산기 (specs/05 CALC-5) */
+
+.ui-status-badge {
+  font-size: 0.8rem;
+}
+
+.ui-status-badge--lg {
+  font-size: 1rem;
+  padding: 0.5em 0.85em;
+}
+
+/* 요청 중에는 이전 결과를 흐리게 유지한다 — 비우지 않는다(깜빡임 방지). */
+.ui-result {
+  transition: opacity 0.15s ease-in-out;
+}
+
+.ui-result--stale {
+  opacity: 0.55;
+}
+
+.ui-big-number {
+  height: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  background-color: var(--admin-surface);
+}
+
+.ui-big-number .ui-stat-value {
+  font-size: clamp(1.35rem, 3.2vw, 2rem);
+  word-break: keep-all;
+}
+
+.ui-gauge-svg {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  margin: 0 auto;
+}
+
+.ui-gauge-arc {
+  fill: none;
+  stroke-width: 10;
+}
+
+.ui-gauge-arc--normal {
+  stroke: var(--bs-success);
+}
+
+.ui-gauge-arc--caution {
+  stroke: var(--bs-warning);
+}
+
+.ui-gauge-arc--danger {
+  stroke: var(--bs-danger);
+}
+
+.ui-gauge-needle {
+  stroke: var(--admin-text);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.ui-gauge-hub {
+  fill: var(--admin-text);
+}
+
+.ui-hrsg-scroll {
+  overflow-x: auto;
+}
+
+.ui-hrsg-svg {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  height: auto;
+}
+
+.ui-hrsg-box {
+  fill: var(--admin-surface-soft);
+  stroke: var(--admin-border);
+  stroke-width: 1.5;
+}
+
+/* 상태는 테두리 색과 굵기로 함께 표시한다(색만으로 구분하지 않음 — 수치·글자가 같이 있다). */
+.ui-hrsg-box[data-level='CAUTION'] {
+  stroke: var(--bs-warning);
+  stroke-width: 3;
+}
+
+.ui-hrsg-box[data-level='DANGER'] {
+  stroke: var(--bs-danger);
+  stroke-width: 3.5;
+}
+
+.ui-hrsg-title {
+  fill: var(--admin-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ui-hrsg-value,
+.ui-hrsg-note {
+  fill: var(--admin-muted);
+  font-size: 11px;
+}
+
+.ui-hrsg-flow {
+  stroke: var(--admin-muted);
+  stroke-width: 1.5;
+}
+
+.ui-hrsg-arrowhead {
+  fill: var(--admin-muted);
+}
+
+.ui-chart {
+  position: relative;
+  height: 260px;
+}
+
+.ui-chart--short {
+  height: 150px;
+}

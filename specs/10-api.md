@@ -88,8 +88,8 @@
 | `/api/admin/llm/providers/{provider}/test/` | POST | 연결 테스트 |
 | `/api/admin/settings/` | GET · PATCH | 분류별 설정(정의·현재값·기본값) |
 | `/api/admin/settings/{key}/reset/` | POST | 기본값으로 |
-| `/api/admin/gt-models/` | CRUD | + `/import/`(xlsx → 202) |
-| `/api/admin/cleaning-methods/` | CRUD | |
+| `/api/admin/gt-models/` | CRUD | DELETE 는 사용 중지. + `/template/`(xlsx 양식), `/import/`(xlsx, 동기 — 전부 아니면 전무) |
+| `/api/admin/cleaning-methods/` | CRUD | DELETE 는 사용 중지 |
 | `/api/admin/smp-prices/` | GET · POST · DELETE | |
 | `/api/admin/calc-parameter-sets/` | GET · POST | 목록 · 새 버전 생성(활성화) |
 | `/api/admin/calc-parameter-sets/{id}/activate/` | POST | 되돌리기 |

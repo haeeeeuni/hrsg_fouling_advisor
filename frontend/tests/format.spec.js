@@ -66,3 +66,22 @@ describe('날짜 포맷터', () => {
     expect(formatDateTime(null)).toBe(EMPTY)
   })
 })
+
+describe('계산기 표기', () => {
+  it('큰 금액은 억·만 단위로 줄인다', async () => {
+    const { formatWonShort } = await import('@/utils/format')
+    expect(formatWonShort(592_110_000)).toBe('5.92억 원')
+    expect(formatWonShort(5_921_100)).toBe('592만 원')
+    expect(formatWonShort(8000)).toBe('8,000 원')
+    expect(formatWonShort(-180_773_356)).toBe('−1.81억 원')
+  })
+
+  it('null 은 0 이 아니라 계산 불가 · 회수 불가', async () => {
+    const { formatMw, formatPayback, formatWonShort, NOT_COMPUTABLE } = await import('@/utils/format')
+    expect(formatWonShort(null)).toBe(NOT_COMPUTABLE)
+    expect(formatMw(undefined)).toBe(NOT_COMPUTABLE)
+    expect(formatPayback(null)).toBe('회수 불가')
+    expect(formatPayback(0)).toBe('0일')
+    expect(formatPayback(108.4)).toBe('108일')
+  })
+})

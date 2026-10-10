@@ -16,6 +16,10 @@ const expanded = ref(null)
 const TARGET_TYPES = [
   { code: 'User', label: '사용자' },
   { code: 'Setting', label: '설정' },
+  { code: 'GtModel', label: 'GT 운전 한계' },
+  { code: 'CleaningMethod', label: '세정 공법' },
+  { code: 'SmpPrice', label: 'SMP' },
+  { code: 'CalcParameterSet', label: '계산 파라미터' },
 ]
 const ACTIONS = [
   { code: 'CREATE', label: '생성' },

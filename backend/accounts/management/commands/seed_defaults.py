@@ -1,4 +1,4 @@
-"""기본 관리자 계정 + 설정값 시드 (specs/01 AUTH-9, specs/08 ADM-8).
+"""기본 관리자 계정 + 설정값 + 참조 데이터 시드 (specs/01 AUTH-9, specs/06, specs/08 ADM-8).
 
 **이 명령은 멱등이어야 한다.** 여러 번 실행해도 중복 생성이 없어야 하고,
 관리자가 이미 바꿔 둔 설정값을 되돌려서도 안 된다.
@@ -14,6 +14,7 @@ from accounts.models import ApprovalStatus, Role, User
 from accounts.services import active_admins
 from common.models import Setting
 from common.setting_defaults import SETTING_DEFS, serialize_value
+from reference.services import seed_reference_data
 
 # specs/01 AUTH-9 — 활성 관리자가 한 명도 없을 때만 생성한다.
 DEFAULT_ADMIN_USERNAME = "admin"
@@ -36,6 +37,13 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         created, updated = self._seed_settings()
         self.stdout.write(f"설정값: 신규 {created}건, 메타 갱신 {updated}건")
+
+        # 참조 데이터 [임시값] — 이미 있는 이름은 건드리지 않는다 (specs/06 AC-06-1)
+        reference = seed_reference_data()
+        self.stdout.write(
+            "참조 데이터: GT 모델 {gt_models}건, 공법 {methods}건, 파라미터 세트 {param_sets}건, "
+            "SMP {smp}건 신규".format(**reference)
+        )
 
         if options["settings_only"]:
             return

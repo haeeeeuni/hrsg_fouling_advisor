@@ -1,0 +1,256 @@
+{
+ "_comment": "specs/05 §6 임시 계산식의 손계산 기대값(AC-05-2). 실무 사례를 받으면 교체한다.",
+ "gt_models": {
+  "A": [
+   270,
+   135
+  ],
+  "C": [
+   170,
+   85
+  ],
+  "A_noST": [
+   270,
+   null
+  ]
+ },
+ "methods": {
+  "dry": [
+   30000000.0,
+   2,
+   0.85
+  ],
+  "chem": [
+   80000000.0,
+   4,
+   0.95
+  ],
+  "water": [
+   20000000.0,
+   3,
+   0.75
+  ]
+ },
+ "cases": [
+  {
+   "name": "설계값 그대로 — 손실 없음",
+   "gt": "A",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 3.0,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 95,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 0.0,
+    "daily_loss_won": 0.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": -545548800.0,
+    "payback_days": null
+   }
+  },
+  {
+   "name": "배압만 1 kPa 상승",
+   "gt": "A",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 4.0,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 95,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 0.945,
+    "daily_loss_won": 2409750.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": -171736331.25,
+    "payback_days": 266.3439
+   }
+  },
+  {
+   "name": "굴뚝 온도만 10 ℃ 상승",
+   "gt": "A",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 3.0,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 105,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 1.62,
+    "daily_loss_won": 4131000.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": 95272575.0,
+    "payback_days": 155.3673
+   }
+  },
+  {
+   "name": "배압·굴뚝 동시 악화",
+   "gt": "A",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 4.6,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 100,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 2.322,
+    "daily_loss_won": 5921100.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": 372961837.5,
+    "payback_days": 108.3958
+   }
+  },
+  {
+   "name": "부분 부하 50 %",
+   "gt": "A",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 135,
+    "backpressure_kpa": 4.6,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 100,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 1.161,
+    "daily_loss_won": 2960550.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": -86293481.25,
+    "payback_days": 216.7915
+   }
+  },
+  {
+   "name": "청정값보다 좋음(음의 차이 무시)",
+   "gt": "A",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 2.5,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 90,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 0.0,
+    "daily_loss_won": 0.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": -545548800.0,
+    "payback_days": null
+   }
+  },
+  {
+   "name": "ST 정격 미등록 — GT×0.5 가정",
+   "gt": "A_noST",
+   "method": "dry",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 4.0,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 105,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 2.565,
+    "daily_loss_won": 6540750.0,
+    "outage_loss_won": 515548800.0,
+    "net_benefit_won": 469085043.75,
+    "payback_days": 98.1267
+   }
+  },
+  {
+   "name": "E급 모델, 운전 시간 24h",
+   "gt": "C",
+   "method": "chem",
+   "inputs": {
+    "gt_power_mw": 170,
+    "backpressure_kpa": 4.0,
+    "clean_backpressure_kpa": 2.8,
+    "stack_temp_c": 115,
+    "clean_stack_temp_c": 105,
+    "operating_hours_per_day": 24,
+    "smp_won_per_kwh": 120,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 1.734,
+    "daily_loss_won": 4244832.0,
+    "outage_loss_won": 519367680.0,
+    "net_benefit_won": 136580068.0,
+    "payback_days": 148.6309
+   }
+  },
+  {
+   "name": "SMP 높음, 화학 세정",
+   "gt": "A",
+   "method": "chem",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 5.0,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 110,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 18,
+    "smp_won_per_kwh": 250,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 4.32,
+    "daily_loss_won": 16524000.0,
+    "outage_loss_won": 1718496000.0,
+    "net_benefit_won": 1066352500.0,
+    "payback_days": 114.5699
+   }
+  },
+  {
+   "name": "고압 수세정, 회수 기간 김",
+   "gt": "A",
+   "method": "water",
+   "inputs": {
+    "gt_power_mw": 270,
+    "backpressure_kpa": 3.5,
+    "clean_backpressure_kpa": 3.0,
+    "stack_temp_c": 97,
+    "clean_stack_temp_c": 95,
+    "operating_hours_per_day": 20,
+    "smp_won_per_kwh": 150,
+    "exhaust_temp_c": 600
+   },
+   "expected": {
+    "power_loss_total_mw": 0.7965,
+    "daily_loss_won": 2031075.0,
+    "outage_loss_won": 773323200.0,
+    "net_benefit_won": -515319809.37,
+    "payback_days": 520.7904
+   }
+  }
+ ]
+}
