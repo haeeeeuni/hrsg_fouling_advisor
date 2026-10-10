@@ -779,3 +779,37 @@ h6 {
 .ui-chart--short {
   height: 150px;
 }
+
+/* -------------------------------------------------- 체크리스트 (specs/07) */
+
+.ui-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.ui-check-row:last-child {
+  border-bottom: none;
+}
+
+/* 받은 항목은 배경으로도 구분한다(색만이 아니라 버튼 문구·아이콘이 함께 있다). */
+.ui-check-row[data-state='RECEIVED'] .ui-check-main {
+  opacity: 0.75;
+}
+
+.ui-check-main {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.ui-check-memo {
+  max-width: 28rem;
+}
+
+.ui-check-states .btn {
+  min-height: 36px;
+}

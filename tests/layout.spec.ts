@@ -17,6 +17,7 @@ const ADMIN_PAGES = [
   '/admin/cleaning-methods',
   '/admin/smp',
   '/admin/calc-parameters',
+  '/admin/checklist-items',
   '/admin/settings',
   '/admin/audit-logs',
 ];

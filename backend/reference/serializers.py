@@ -7,33 +7,9 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from common.exceptions import Conflict
+from common.serializers import VersionedSerializer
 from reference.models import CalcParameterSet, CleaningMethod, GtModel, SmpPrice
 from reference.param_defs import ParamValidationError, validate_params
-
-
-class VersionedSerializer(serializers.ModelSerializer):
-    """수정 요청에 version 을 실어 보내면, 다른 관리자가 먼저 고쳤을 때 409 를 낸다(ADM-7)."""
-
-    def validate(self, attrs: dict) -> dict:
-        expected = self.initial_data.get("version") if isinstance(self.initial_data, dict) else None
-        if self.instance is not None and expected is not None:
-            if int(expected) != self.instance.version:
-                raise Conflict(
-                    code="STALE_VERSION",
-                    message="다른 관리자가 먼저 수정했습니다. 새로고침 후 다시 시도하세요.",
-                    details={"current_version": self.instance.version},
-                )
-        return attrs
-
-    def update(self, instance, validated_data):
-        validated_data.pop("version", None)
-        changed = any(getattr(instance, k) != v for k, v in validated_data.items())
-        instance = super().update(instance, validated_data)
-        if changed:
-            instance.version += 1
-            instance.save(update_fields=["version", "updated_at"])
-        return instance
 
 
 class GtModelSerializer(VersionedSerializer):

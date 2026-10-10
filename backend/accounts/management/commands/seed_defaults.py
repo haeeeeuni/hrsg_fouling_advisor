@@ -12,6 +12,7 @@ from django.db import transaction
 
 from accounts.models import ApprovalStatus, Role, User
 from accounts.services import active_admins
+from checklist.services import seed_template
 from common.models import Setting
 from common.setting_defaults import SETTING_DEFS, serialize_value
 from reference.services import seed_reference_data
@@ -44,6 +45,9 @@ class Command(BaseCommand):
             "참조 데이터: GT 모델 {gt_models}건, 공법 {methods}건, 파라미터 세트 {param_sets}건, "
             "SMP {smp}건 신규".format(**reference)
         )
+
+        # 체크리스트 항목 [임시값] — 사내 양식을 받으면 관리자 모드에서 교체한다 (specs/07 §2.1)
+        self.stdout.write(f"체크리스트 항목: 신규 {seed_template()}건")
 
         if options["settings_only"]:
             return

@@ -11,7 +11,9 @@ urlpatterns = [
     path("api/admin/", include("accounts.urls_admin")),
     path("api/admin/", include("common.urls_admin")),
     path("api/admin/", include("reference.urls")),
+    path("api/admin/", include("checklist.urls_admin")),
     path("api/calculator/", include("calculator.urls")),
+    path("api/checklist/", include("checklist.urls")),
     path("api/", include("common.urls")),
 ]
 

@@ -16,6 +16,8 @@ USER_ENDPOINTS = [
     ("post", "/api/calculator/loss/"),
     ("post", "/api/calculator/methods/"),
     ("post", "/api/calculator/pinch-approach/"),
+    ("get", "/api/checklist/requests/"),
+    ("post", "/api/checklist/requests/"),
 ]
 
 # (메서드, 경로) — 관리자만. {pk} 는 존재하는 사용자로 바뀐다.
@@ -44,6 +46,11 @@ ADMIN_ENDPOINTS = [
     ("get", "/api/admin/calc-parameter-sets/"),
     ("post", "/api/admin/calc-parameter-sets/"),
     ("post", "/api/admin/calc-parameter-sets/preview/"),
+    ("get", "/api/admin/checklist-items/"),
+    ("post", "/api/admin/checklist-items/"),
+    ("post", "/api/admin/checklist-items/reorder/"),
+    ("get", "/api/admin/checklist-items/export/"),
+    ("post", "/api/admin/checklist-items/import/"),
 ]
 
 PUBLIC_ENDPOINTS = [

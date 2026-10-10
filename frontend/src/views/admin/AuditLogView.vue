@@ -20,6 +20,7 @@ const TARGET_TYPES = [
   { code: 'CleaningMethod', label: '세정 공법' },
   { code: 'SmpPrice', label: 'SMP' },
   { code: 'CalcParameterSet', label: '계산 파라미터' },
+  { code: 'ChecklistTemplateItem', label: '체크리스트 항목' },
 ]
 const ACTIONS = [
   { code: 'CREATE', label: '생성' },

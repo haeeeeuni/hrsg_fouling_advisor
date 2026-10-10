@@ -2,16 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 현재 상태 — N2(계산기 + 참조 데이터) 완료
+## 현재 상태 — N3(데이터 요청 체크리스트) 완료
 
 - 2026-10-10 요구사항이 바뀌어 "HRSG Fouling Advisor"(운전 시계열 → 오염도 지수·D-day)에서
   **"HRSG 레퍼런스 앱"**(질의응답 · 계산기 · 플랜트 데이터 요청 체크리스트)으로 전환 중이다.
 - 명세 `specs/00~14` 확정(N0). **N1 완료**(브랜치 `feat/reference-app`): 이전 앱 코드 제거, 회원가입·승인·ID 로그인,
   `Setting` 의 `common` 이전, pgvector 확장, 소개·홈·헤더 로그인·라이트/다크·모바일, 관리자 모드(개요·가입 승인·사용자·설정·감사 로그).
   **N2 완료**: `reference`(GT 한계표·공법·SMP·버전 있는 파라미터 세트, 전부 `[임시값]` 시드)와 `calculator`(순수 함수 +
-  `runner.py`), 계산기 3탭(게이지·HRSG 도식·차트·URL 복원), 관리자 참조 데이터 4화면. 질의응답·체크리스트는 "준비 중"이다.
-  다음은 **N3(체크리스트)**.
-- 백엔드 앱: `accounts`·`common`·`reference`·`calculator`. 새 앱은 마일스톤마다 추가하고 `pytest.ini` testpaths·`pyproject` 도 함께 갱신한다.
+  `runner.py`), 계산기 3탭(게이지·HRSG 도식·차트·URL 복원), 관리자 참조 데이터 4화면.
+  **N3 완료**: `checklist`(템플릿 46항목 `[임시값]`, 요청 건 = 생성 시 템플릿 복사, 필수 기준 진행률·자동 완료,
+  한·영 이메일 본문 복사, 관리자 템플릿 xlsx). 질의응답만 "준비 중"이다. 다음은 **N4(지식 베이스)**.
+- 백엔드 앱: `accounts`·`common`·`reference`·`calculator`·`checklist`. 새 앱은 마일스톤마다 추가하고 `pytest.ini` testpaths·`pyproject` 도 함께 갱신한다.
+  공통 도구: `common/serializers.VersionedSerializer`(동시 편집 409), `common/audit.DeactivateOnDeleteMixin`(삭제 = 사용 중지).
 - **계산 응답은 `calculator/runner.py` 한 곳에서 조립한다.** 뷰와 챗봇 도구(N5)가 같은 함수를 부르게 하려는 것이다.
   응답에 계수·한계값 원본을 넣지 않는다 — `calculator/tests/test_api.py` 가 응답 JSON 에 비밀 키가 없는지 검사한다.
   관리자 파라미터 화면은 항목 정의를 API(`definitions`)로 받아 그려서 프론트 번들에도 계수 이름이 없다(빌드 산출물에서 확인).
@@ -120,6 +122,7 @@ cd .. && npm run test:e2e
   (관리자 세션을 물려받은 채 로그인하면 Django 가 세션을 폐기한다).
 - **macOS 에서 Celery 는 `--pool=solo`.** 기본 prefork 는 태스크를 받자마자 죽고 화면은 끝없이 기다린다.
 - **Vite 는 `localhost`(IPv6)에만 바인딩된다.** `127.0.0.1:5173` 으로는 접속되지 않는다.
+- **E2E 에서 실제 계정으로 틀린 비밀번호를 넣지 않는다.** 연속 실패가 실행마다 쌓여 그 계정이 잠긴다(기본 관리자가 5분 잠긴 적 있다).
 - **E2E 는 Django 를 `THROTTLE_SIGNUP=1000/hour` 로 띄워야 한다.** 가입 스로틀(IP 시간당 10회)에 걸려 두세 번째 실행부터 실패한다.
 - **로컬 PostgreSQL(Homebrew `postgresql@16`)에는 pgvector 를 소스로 빌드해 넣었다.** Homebrew `pgvector` 는 17·18 용만 있다.
   빌드 시 `pg_config` 가 없는 SDK 경로(MacOSX26.sdk)를 가리키므로 `make PG_SYSROOT=$(xcrun --show-sdk-path)` 가 필요하다.

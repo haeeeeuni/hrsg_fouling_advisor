@@ -88,6 +88,41 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
         label="기본 세정 공법",
         description="계산기를 열 때 처음 선택되는 공법 이름. 없거나 비활성이면 첫 공법을 쓴다.",
     ),
+    # --- N3: 체크리스트 이메일 문구 (specs/07 CHK-5) ---
+    SettingDef(
+        key="chk_email_header_ko",
+        default=(
+            "안녕하십니까.\nHRSG 세정 평가를 위해 아래 자료를 요청드립니다. "
+            "정확한 평가를 위해 가능한 범위에서 회신 부탁드립니다."
+        ),
+        value_type=TYPE_TEXT,
+        category=CAT_CHECKLIST,
+        label="복사 문구 머리말 (한국어)",
+    ),
+    SettingDef(
+        key="chk_email_footer_ko",
+        default="문의 사항은 회신 주시면 안내드리겠습니다. 감사합니다.",
+        value_type=TYPE_TEXT,
+        category=CAT_CHECKLIST,
+        label="복사 문구 맺음말 (한국어)",
+    ),
+    SettingDef(
+        key="chk_email_header_en",
+        default=(
+            "Dear Sir or Madam,\nFor the HRSG cleaning assessment, "
+            "we kindly request the data below. Please share what is available."
+        ),
+        value_type=TYPE_TEXT,
+        category=CAT_CHECKLIST,
+        label="복사 문구 머리말 (영어)",
+    ),
+    SettingDef(
+        key="chk_email_footer_en",
+        default="Please let us know if you have any questions. Thank you.",
+        value_type=TYPE_TEXT,
+        category=CAT_CHECKLIST,
+        label="복사 문구 맺음말 (영어)",
+    ),
 )
 
 SETTING_DEF_BY_KEY: dict[str, SettingDef] = {d.key: d for d in SETTING_DEFS}

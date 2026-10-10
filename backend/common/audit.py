@@ -165,3 +165,27 @@ class AuditedModelMixin:
             target_label=label,
             before=before,
         )
+
+
+class DeactivateOnDeleteMixin:
+    """지우지 않고 사용 중지한다(참조값·체크리스트 템플릿).
+
+    과거 기록이 가리키던 대상이 사라지지 않게 한다.
+
+    AuditedModelMixin 보다 **앞에** 섞는다 — 뒤에 두면 삭제(DELETE) 감사 기록이 함께 남는다.
+    """
+
+    def perform_destroy(self, instance) -> None:
+        if not instance.is_active:
+            return
+        instance.is_active = False
+        instance.save(update_fields=["is_active", "updated_at"])
+        record(
+            request=self.request,
+            action=AuditAction.UPDATE,
+            target_type=self.audit_target_type,
+            target_id=instance.pk,
+            target_label=str(instance),
+            before={"is_active": True},
+            after={"is_active": False},
+        )

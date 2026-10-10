@@ -58,7 +58,14 @@ const brandTarget = computed(() => (auth.isAuthenticated ? { name: 'home' } : { 
       <nav v-if="auth.isAuthenticated" id="featureNav" ref="featureNav" class="collapse navbar-collapse" aria-label="기능">
         <ul class="navbar-nav ui-feature-nav">
           <li v-for="feature in FEATURES" :key="feature.key" class="nav-item">
-            <RouterLink class="nav-link" :to="{ name: feature.route }" active-class="active">
+            <!-- 하위 화면(/checklist/3 등)에서도 활성으로 보이게 경로 앞부분으로 판정한다. -->
+            <RouterLink
+              class="nav-link"
+              :class="{ active: route.path.startsWith(`/${feature.key}`) }"
+              :to="{ name: feature.route }"
+              active-class=""
+              :aria-current="route.path.startsWith(`/${feature.key}`) ? 'page' : undefined"
+            >
               <i class="bi" :class="feature.icon" aria-hidden="true"></i>
               {{ feature.title }}
             </RouterLink>

@@ -174,6 +174,6 @@ def reject(user: User, *, by: User, reason: str) -> None:
 def has_activity(user: User) -> bool:
     """물리 삭제를 막아야 하는 활동 기록이 있는지 (specs/01 §7).
 
-    기준은 대화(N5)·데이터 요청 건(N3)이다. 해당 모델이 생기는 마일스톤에서 여기에 확인을 더한다.
+    기준은 대화(N5)·데이터 요청 건(N3)이다. 대화는 N5 에서 여기에 더한다.
     """
-    return False
+    return user.data_requests.exists()

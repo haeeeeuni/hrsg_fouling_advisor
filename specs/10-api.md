@@ -94,7 +94,7 @@
 | `/api/admin/calc-parameter-sets/` | GET · POST | 목록 · 새 버전 생성(활성화) |
 | `/api/admin/calc-parameter-sets/{id}/activate/` | POST | 되돌리기 |
 | `/api/admin/calc-parameter-sets/preview/` | POST | 후보 파라미터로 예시 입력 결과 미리보기 |
-| `/api/admin/checklist-items/` | CRUD | + `/import/`(xlsx → 202), `/export/`, `/reorder/` |
+| `/api/admin/checklist-items/` | CRUD | DELETE 는 사용 중지. + `/import/`(xlsx, 동기 — 전부 아니면 전무), `/export/`, `/reorder/`(`{ids}`) |
 | `/api/admin/usage/` | GET | 일·사용자별 사용량 |
 | `/api/admin/audit-logs/` | GET | 필터: 기간·관리자·대상 |
 

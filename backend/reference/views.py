@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from accounts.permissions import IsAdminRole
 from calculator import runner
 from common import audit
-from common.audit import AuditedModelMixin
+from common.audit import AuditedModelMixin, DeactivateOnDeleteMixin
 from common.exceptions import Conflict, ValidationError
 from common.models import AuditAction
 from reference import services
@@ -28,25 +28,6 @@ from reference.serializers import (
 
 MAX_IMPORT_MB = 5
 XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-
-class DeactivateOnDeleteMixin:
-    """참조값은 지우지 않고 사용 중지한다(specs/06). 과거 결과가 가리키던 대상이 사라지지 않게."""
-
-    def perform_destroy(self, instance) -> None:
-        if not instance.is_active:
-            return
-        instance.is_active = False
-        instance.save(update_fields=["is_active", "updated_at"])
-        audit.record(
-            request=self.request,
-            action=AuditAction.UPDATE,
-            target_type=self.audit_target_type,
-            target_id=instance.pk,
-            target_label=str(instance),
-            before={"is_active": True},
-            after={"is_active": False},
-        )
 
 
 # DeactivateOnDeleteMixin 을 먼저 둔다 — AuditedModelMixin 의 삭제 기록(DELETE)보다 앞서야

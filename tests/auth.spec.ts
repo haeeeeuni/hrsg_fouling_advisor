@@ -41,8 +41,10 @@ test.describe('비로그인', () => {
   });
 
   test('틀린 비밀번호는 계정 존재 여부를 알리지 않는다', async ({ page }) => {
+    // 실제 계정(admin)으로 틀리면 실행할 때마다 연속 실패가 쌓여 관리자 로그인이 잠긴다(5회·5분).
+    // 없는 ID 로 시험한다 — 있는 ID 와 같은 문구인지는 백엔드 테스트가 본다.
     await page.goto('/');
-    await loginViaHeader(page, { username: 'admin', password: 'wrong-pass-1' });
+    await loginViaHeader(page, { username: uniqueUsername('nobody'), password: 'wrong-pass-1' });
 
     await expect(loginPanel(page).getByRole('alert')).toHaveText('ID 또는 비밀번호가 올바르지 않습니다.');
   });
@@ -124,8 +126,8 @@ test.describe('관리자', () => {
     for (const title of ['질의응답', '계산기', '플랜트 데이터 요청 체크리스트']) {
       await expect(page.getByRole('link', { name: new RegExp(title) }).first()).toBeVisible();
     }
-    await page.getByRole('main').getByRole('link', { name: /체크리스트/ }).click();
-    await expect(page).toHaveURL(/\/checklist$/);
+    await page.getByRole('main').getByRole('link', { name: /질의응답/ }).click();
+    await expect(page).toHaveURL(/\/chat$/);
     await expect(page.getByText('준비 중인 기능입니다')).toBeVisible();
   });
 });

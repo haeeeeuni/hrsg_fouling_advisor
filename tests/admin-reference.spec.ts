@@ -64,3 +64,19 @@ test(`SMP 를 등록하면 계산기 기본값과 출처가 바뀐다 ${MUTATES}
   }
   await api.dispose();
 });
+
+test(`체크리스트 항목 — 임시값 안내가 보이고 같은 분류 안에서 순서를 바꿀 수 있다 ${MUTATES}`, async ({ page }) => {
+  await page.goto('/admin/checklist-items');
+  await expect(page.getByText(/임시값 항목이 \d+개 있습니다/)).toBeVisible();
+
+  const pinch = page.getByRole('region', { name: '핀치·어프로치' });
+  const firstName = async () => (await pinch.locator('tbody tr').first().locator('.fw-semibold').textContent())!.trim();
+  const before = await firstName();
+
+  await pinch.getByRole('button', { name: `${before} 아래로` }).click();
+  await expect.poll(firstName).not.toBe(before);
+
+  // 원래 순서로 되돌린다.
+  await pinch.getByRole('button', { name: `${before} 위로` }).click();
+  await expect.poll(firstName).toBe(before);
+});

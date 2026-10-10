@@ -12,6 +12,10 @@ const IMPLEMENTED = {
     path: '/calculator/:tab(methods|pinch)?',
     component: () => import('@/views/CalculatorView.vue'),
   },
+  checklist: {
+    path: '/checklist',
+    component: () => import('@/views/ChecklistListView.vue'),
+  },
 }
 
 const featureRoutes = FEATURES.map((feature) => ({
@@ -32,6 +36,7 @@ export const ADMIN_MENU = [
   { path: 'cleaning-methods', name: 'admin-cleaning-methods', title: '세정 공법', icon: 'bi-droplet', view: 'CleaningMethodsView' },
   { path: 'smp', name: 'admin-smp', title: 'SMP', icon: 'bi-currency-exchange', view: 'SmpView' },
   { path: 'calc-parameters', name: 'admin-calc-parameters', title: '계산 파라미터', icon: 'bi-calculator', view: 'CalcParametersView' },
+  { path: 'checklist-items', name: 'admin-checklist-items', title: '체크리스트 항목', icon: 'bi-ui-checks', view: 'ChecklistTemplateView' },
   { path: 'settings', name: 'admin-settings', title: '설정', icon: 'bi-sliders', view: 'SettingsView' },
   { path: 'audit-logs', name: 'admin-audit-logs', title: '감사 로그', icon: 'bi-journal-text', view: 'AuditLogView' },
 ]
@@ -45,6 +50,7 @@ const ADMIN_VIEWS = {
   CleaningMethodsView: () => import('@/views/admin/CleaningMethodsView.vue'),
   SmpView: () => import('@/views/admin/SmpView.vue'),
   CalcParametersView: () => import('@/views/admin/CalcParametersView.vue'),
+  ChecklistTemplateView: () => import('@/views/admin/ChecklistTemplateView.vue'),
   SettingsView: () => import('@/views/admin/SettingsView.vue'),
   AuditLogView: () => import('@/views/admin/AuditLogView.vue'),
 }
@@ -71,6 +77,13 @@ const routes = [
     meta: { requiresAuth: true, title: '홈' },
   },
   ...featureRoutes,
+  {
+    path: '/checklist/:id(\\d+)',
+    name: 'checklist-detail',
+    component: () => import('@/views/ChecklistDetailView.vue'),
+    props: true,
+    meta: { requiresAuth: true, title: '데이터 요청 건' },
+  },
   {
     path: '/profile',
     name: 'profile',
