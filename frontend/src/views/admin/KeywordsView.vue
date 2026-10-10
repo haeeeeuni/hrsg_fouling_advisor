@@ -111,7 +111,13 @@ async function reExtract() {
             </button>
           </div>
         </div>
-        <div v-if="error" class="alert alert-danger py-2 small mt-2 mb-0">{{ error.message }}</div>
+        <div v-if="error" class="alert alert-danger py-2 small mt-2 mb-0">
+          {{ error.message }}
+          <!-- 공통 문구("입력값이 올바르지 않습니다.")만으로는 이유를 알 수 없다. 서버의 항목별 사유를 덧붙인다. -->
+          <ul v-if="Object.keys(error.details ?? {}).length" class="mb-0 mt-1 ps-3">
+            <li v-for="msg in Object.values(error.details).flat()" :key="msg">{{ msg }}</li>
+          </ul>
+        </div>
       </div>
     </div>
 

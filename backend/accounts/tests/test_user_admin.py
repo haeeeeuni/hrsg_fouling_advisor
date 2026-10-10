@@ -74,6 +74,17 @@ def test_duplicate_employee_no_is_rejected(api, admin_user, normal_user):
     res = api.post(URL, payload(employee_no="A1234"), format="json")
 
     assert res.status_code == 400
+    # DRF 기본 문구("사용자의 사번은/는 이미 존재합니다.")가 아니라 명세 문구가 나가야 한다.
+    assert res.data["error"]["details"]["employee_no"] == ["이미 등록된 사번입니다."]
+
+
+def test_duplicate_is_detected_after_uppercasing(api, admin_user, normal_user):
+    api.force_authenticate(admin_user)
+
+    res = api.post(URL, payload(employee_no="a1234"), format="json")
+
+    assert res.status_code == 400
+    assert res.data["error"]["details"]["employee_no"] == ["이미 등록된 사번입니다."]
 
 
 def test_employee_no_is_uppercased(api, admin_user):

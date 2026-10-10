@@ -84,6 +84,12 @@ class UserSerializer(serializers.ModelSerializer):
             "initial_password",
         ]
         read_only_fields = ["id", "role_label", "last_login_at", "created_at"]
+        extra_kwargs = {
+            # DRF 가 붙이는 자동 중복 검사를 뺀다. 그대로 두면 validate_employee_no 보다 먼저 돌아
+            # "사용자의 사번은/는 이미 존재합니다." 라는 기본 문구가 나간다. 형식 검사(모델 정규식)는
+            # 유지하고, 중복은 아래에서 "이미 등록된 사번입니다." 로 알린다. DB 유일 제약은 그대로다.
+            "employee_no": {"validators": User._meta.get_field("employee_no").validators},
+        }
 
     def to_internal_value(self, data):
         """사번을 필드 검증 **전에** 대문자로 맞춘다.

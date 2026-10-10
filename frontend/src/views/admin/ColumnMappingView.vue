@@ -20,7 +20,46 @@ const versions = ref([])
 const sampleFile = ref(null)
 const error = ref(null)
 
-const isComplete = computed(() => problems.value.length === 0)
+/**
+ * 필수 충족 규칙을 화면에서 바로 판정한다 (specs/02 §5.3 "실시간 배지").
+ * 서버 판정(problems)은 불러올 때·저장할 때만 오므로, 그것만 쓰면 필수 항목을 비워도 배지가
+ * "통과" 로 남는다. 규칙은 units/standard_fields.check_required 와 같고, 필수 여부와 대체 관계는
+ * 표준 항목 API(requirement, substitutes)에서 받아 코드에 항목명을 두지 않는다.
+ */
+const liveProblems = computed(() => {
+  if (!standardFields.value.length) return problems.value
+  const mapped = new Set(activeMappings().map((m) => m.standard_field))
+  const out = []
+
+  const missing = standardFields.value
+    .filter((f) => f.requirement === 'REQUIRED' && !mapped.has(f.key))
+    .map((f) => f.key)
+  if (missing.length) {
+    out.push({ code: 'REQUIRED_FIELD_UNMAPPED', message: '필수 표준 항목이 매핑되지 않았습니다.', fields: missing })
+  }
+
+  // 대체 관계로 묶인 그룹(예: 배기유량 ← 연료유량·IGV 개도) 중 하나는 매핑돼 있어야 한다.
+  const groups = {}
+  for (const f of standardFields.value) {
+    for (const target of f.substitutes ?? []) (groups[target] ??= [target]).push(f.key)
+  }
+  for (const [target, keys] of Object.entries(groups)) {
+    if (keys.some((k) => mapped.has(k))) continue
+    const others = keys.slice(1).map(labelOf).join('·')
+    out.push({
+      code: `${target.toUpperCase()}_UNMAPPED`,
+      message: `${labelOf(target)} 또는 대체 항목(${others}) 중 하나는 매핑해야 합니다.`,
+      fields: keys,
+    })
+  }
+  return out
+})
+
+const isComplete = computed(() => liveProblems.value.length === 0)
+
+function labelOf(key) {
+  return standardFields.value.find((f) => f.key === key)?.label ?? key
+}
 
 const grouped = computed(() => ({
   REQUIRED: standardFields.value.filter((f) => f.requirement === 'REQUIRED'),
@@ -125,7 +164,7 @@ async function save() {
     <div class="alert py-2" :class="isComplete ? 'alert-success' : 'alert-warning'" role="status">
       <strong>{{ isComplete ? '필수 충족 규칙 통과' : '필수 충족 규칙 미통과' }}</strong>
       <ul v-if="!isComplete" class="mb-0 mt-1 ps-3 small">
-        <li v-for="p in problems" :key="p.code">{{ p.message }} ({{ p.fields?.join(', ') }})</li>
+        <li v-for="p in liveProblems" :key="p.code">{{ p.message }} ({{ p.fields?.map(labelOf).join(', ') }})</li>
       </ul>
     </div>
 

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from maintenance.models import CleaningEvent, FoulingKeyword, MaintenanceRecord
 
@@ -58,6 +59,14 @@ class FoulingKeywordSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "category_label", "created_at"]
+        # 기본 문구("keyword, category 은/는 반드시 고유해야 합니다")는 사용자에게 뜻이 전해지지 않는다.
+        validators = [
+            UniqueTogetherValidator(
+                queryset=FoulingKeyword.objects.all(),
+                fields=["keyword", "category"],
+                message="같은 분류에 이미 등록된 키워드입니다.",
+            )
+        ]
 
     def validate_weight(self, value: float) -> float:
         if value < 0:
