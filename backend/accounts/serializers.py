@@ -1,26 +1,90 @@
-"""입력 검증 및 표현 변환 (specs/01, specs/15 §2)."""
+"""입력 검증 및 표현 변환 (specs/01, specs/10 §2·§6)."""
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from accounts.models import LoginHistory, User
+from accounts.models import USERNAME_VALIDATOR, LoginHistory, User
 
 
-class LoginSerializer(serializers.Serializer):
+def _normalize_username(value: str) -> str:
+    return (value or "").strip().lower()
+
+
+def _check_password(value: str, user: User | None = None) -> str:
+    try:
+        validate_password(value, user=user)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError(list(exc.messages)) from exc
+    return value
+
+
+class SignupSerializer(serializers.Serializer):
+    """POST /api/auth/signup/ (specs/01 AUTH-1)."""
+
+    username = serializers.CharField(max_length=150, label="ID")
+    password = serializers.CharField(max_length=128, write_only=True, label="비밀번호")
+    password_confirm = serializers.CharField(max_length=128, write_only=True, label="비밀번호 확인")
     full_name = serializers.CharField(max_length=50, label="성명")
-    employee_no = serializers.CharField(max_length=20, label="사번")
-    password = serializers.CharField(max_length=128, label="비밀번호", write_only=True)
+    organization = serializers.CharField(max_length=100, label="소속")
+    email = serializers.EmailField(required=False, allow_blank=True, label="이메일")
+    signup_reason = serializers.CharField(
+        max_length=500, required=False, allow_blank=True, label="가입 사유"
+    )
 
-    def validate_employee_no(self, value: str) -> str:
-        return value.strip().upper()
+    def validate_username(self, value: str) -> str:
+        value = _normalize_username(value)
+        try:
+            USERNAME_VALIDATOR(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages)) from exc
+        # 반려된 ID 도 여기서 막힌다 — 관리자가 승인하거나 삭제해야 다시 쓸 수 있다(AUTH-5).
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("이미 사용 중인 ID 입니다.")
+        return value
 
     def validate_full_name(self, value: str) -> str:
         return value.strip()
 
+    def validate_organization(self, value: str) -> str:
+        return value.strip()
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError(
+                {"password_confirm": ["비밀번호가 일치하지 않습니다."]}
+            )
+        probe = User(
+            username=attrs["username"],
+            full_name=attrs["full_name"],
+            email=attrs.get("email", ""),
+        )
+        try:
+            _check_password(attrs["password"], probe)
+        except serializers.ValidationError as exc:
+            raise serializers.ValidationError({"password": exc.detail}) from exc
+        return attrs
+
+    def create(self, validated_data: dict) -> User:
+        validated_data.pop("password_confirm")
+        return User.objects.create_user(
+            username=validated_data.pop("username"),
+            full_name=validated_data.pop("full_name"),
+            password=validated_data.pop("password"),
+            **validated_data,
+        )
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, label="ID")
+    password = serializers.CharField(max_length=128, label="비밀번호", write_only=True)
+
+    def validate_username(self, value: str) -> str:
+        return _normalize_username(value)
+
 
 class MeSerializer(serializers.ModelSerializer):
-    """GET /api/auth/me/ 응답 (specs/15 §2)."""
+    """GET /api/auth/me/ 응답."""
 
     is_admin = serializers.BooleanField(source="is_admin_role", read_only=True)
 
@@ -28,16 +92,24 @@ class MeSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "employee_no",
+            "username",
             "full_name",
+            "organization",
+            "email",
             "role",
             "is_admin",
-            "department",
-            "phone",
             "must_change_password",
             "last_login_at",
         ]
         read_only_fields = fields
+
+
+class MeUpdateSerializer(serializers.ModelSerializer):
+    """PATCH /api/auth/me/ — 본인 정보 수정. ID·역할은 바꿀 수 없다."""
+
+    class Meta:
+        model = User
+        fields = ["full_name", "organization", "email"]
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -45,12 +117,7 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(max_length=128, write_only=True)
 
     def validate_new_password(self, value: str) -> str:
-        # specs/01 §6 — MinimumLengthValidator(4) 만 활성화되어 있다.
-        try:
-            validate_password(value)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(list(exc.messages)) from exc
-        return value
+        return _check_password(value, self.context.get("user"))
 
     def validate(self, attrs: dict) -> dict:
         if attrs["current_password"] == attrs["new_password"]:
@@ -60,97 +127,69 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """관리자용 사용자 CRUD (specs/01 §5)."""
+class AdminUserSerializer(serializers.ModelSerializer):
+    """관리자용 사용자 조회·수정 (specs/01 AUTH-10). 생성은 회원가입으로만 한다."""
 
     role_label = serializers.CharField(source="get_role_display", read_only=True)
-    initial_password = serializers.CharField(write_only=True, required=False, min_length=4)
+    approval_status_label = serializers.CharField(
+        source="get_approval_status_display", read_only=True
+    )
+    approved_by_name = serializers.CharField(
+        source="approved_by.full_name", read_only=True, default=""
+    )
 
     class Meta:
         model = User
         fields = [
             "id",
-            "employee_no",
+            "username",
             "full_name",
+            "organization",
+            "email",
+            "signup_reason",
             "role",
             "role_label",
-            "department",
-            "phone",
-            "email",
+            "approval_status",
+            "approval_status_label",
+            "approved_by_name",
+            "approved_at",
+            "rejection_reason",
             "is_active",
             "must_change_password",
             "last_login_at",
             "created_at",
-            "initial_password",
         ]
-        read_only_fields = ["id", "role_label", "last_login_at", "created_at"]
-        extra_kwargs = {
-            # DRF 가 붙이는 자동 중복 검사를 뺀다. 그대로 두면 validate_employee_no 보다 먼저 돌아
-            # "사용자의 사번은/는 이미 존재합니다." 라는 기본 문구가 나간다. 형식 검사(모델 정규식)는
-            # 유지하고, 중복은 아래에서 "이미 등록된 사번입니다." 로 알린다. DB 유일 제약은 그대로다.
-            "employee_no": {"validators": User._meta.get_field("employee_no").validators},
-        }
+        read_only_fields = [
+            "id",
+            "username",
+            "signup_reason",
+            "role_label",
+            "approval_status",
+            "approval_status_label",
+            "approved_by_name",
+            "approved_at",
+            "rejection_reason",
+            "must_change_password",
+            "last_login_at",
+            "created_at",
+        ]
 
-    def to_internal_value(self, data):
-        """사번을 필드 검증 **전에** 대문자로 맞춘다.
 
-        모델의 정규식(영문 대문자+숫자, specs/01 §7)이 validate_employee_no 보다
-        먼저 돌기 때문에, 여기서 올리지 않으면 소문자 입력이 형식 오류로 막힌다.
-        로그인은 소문자를 받아주므로(LoginSerializer) 생성도 같게 맞춘다.
-        """
-        raw = data.get("employee_no")
-        if isinstance(raw, str):
-            data = {**data, "employee_no": raw.strip().upper()}
-        return super().to_internal_value(data)
+class RejectSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=500, label="반려 사유")
 
-    def validate_employee_no(self, value: str) -> str:
-        value = value.strip().upper()
-        # 사번은 변경 불가 (specs/01 §5)
-        if self.instance and self.instance.employee_no != value:
-            raise serializers.ValidationError("사번은 변경할 수 없습니다.")
-        if not self.instance and User.objects.filter(employee_no=value).exists():
-            raise serializers.ValidationError("이미 등록된 사번입니다.")
+    def validate_reason(self, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("반려 사유를 입력해 주세요.")
         return value
-
-    def validate(self, attrs: dict) -> dict:
-        if not self.instance and not attrs.get("initial_password"):
-            raise serializers.ValidationError(
-                {"initial_password": ["초기 비밀번호를 입력해야 합니다."]}
-            )
-        return attrs
-
-    def create(self, validated_data: dict) -> User:
-        password = validated_data.pop("initial_password")
-        user = User.objects.create_user(
-            employee_no=validated_data.pop("employee_no"),
-            full_name=validated_data.pop("full_name"),
-            password=password,
-            # 생성 시 비밀번호 변경을 강제한다 (specs/01 §5)
-            must_change_password=True,
-            **validated_data,
-        )
-        return user
-
-    def update(self, instance: User, validated_data: dict) -> User:
-        validated_data.pop("initial_password", None)
-        validated_data.pop("employee_no", None)
-        return super().update(instance, validated_data)
-
-
-class UserListSerializer(UserSerializer):
-    class Meta(UserSerializer.Meta):
-        fields = [f for f in UserSerializer.Meta.fields if f != "initial_password"]
 
 
 class ResetPasswordSerializer(serializers.Serializer):
-    new_password = serializers.CharField(min_length=4, max_length=128, write_only=True)
+    new_password = serializers.CharField(max_length=128, write_only=True)
 
     def validate_new_password(self, value: str) -> str:
-        try:
-            validate_password(value)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(list(exc.messages)) from exc
-        return value
+        return _check_password(value, self.context.get("user"))
 
 
 class LoginHistorySerializer(serializers.ModelSerializer):
@@ -160,8 +199,7 @@ class LoginHistorySerializer(serializers.ModelSerializer):
         model = LoginHistory
         fields = [
             "id",
-            "attempted_employee_no",
-            "full_name_input",
+            "attempted_username",
             "full_name",
             "success",
             "fail_reason",

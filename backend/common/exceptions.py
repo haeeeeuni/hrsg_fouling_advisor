@@ -1,4 +1,4 @@
-"""도메인 예외. DRF 핸들러가 공통 JSON 포맷으로 변환한다(AGENTS.md §4, specs/15 §1)."""
+"""도메인 예외. DRF 핸들러가 공통 JSON 포맷으로 변환한다(AGENTS.md §4, specs/10 §1)."""
 
 from typing import Any
 
@@ -64,17 +64,31 @@ class Conflict(DomainError):
 
 
 class LoginFailed(DomainError):
-    """specs/01 §3.2 — 원인을 구분하지 않는 통일 메시지(계정 존재 여부 노출 방지)."""
+    """specs/01 AUTH-7 — 원인을 구분하지 않는 통일 메시지(계정 존재 여부 노출 방지)."""
 
     code = "LOGIN_FAILED"
-    message = "성명, 사번 또는 비밀번호가 올바르지 않습니다."
+    message = "ID 또는 비밀번호가 올바르지 않습니다."
     status_code = status.HTTP_400_BAD_REQUEST
 
 
 class AccountInactive(DomainError):
     code = "ACCOUNT_INACTIVE"
     message = "비활성화된 계정입니다. 관리자에게 문의하세요."
-    status_code = status.HTTP_400_BAD_REQUEST
+    status_code = status.HTTP_403_FORBIDDEN
+
+
+class AccountPending(DomainError):
+    """specs/01 §5 — 비밀번호가 맞았을 때만 내보낸다."""
+
+    code = "ACCOUNT_PENDING"
+    message = "관리자 승인 대기 중입니다. 승인 후 로그인할 수 있습니다."
+    status_code = status.HTTP_403_FORBIDDEN
+
+
+class AccountRejected(DomainError):
+    code = "ACCOUNT_REJECTED"
+    message = "가입이 반려되었습니다."
+    status_code = status.HTTP_403_FORBIDDEN
 
 
 class LoginLocked(DomainError):
@@ -83,21 +97,9 @@ class LoginLocked(DomainError):
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
 
 
-class DuplicateEmployeeNo(DomainError):
-    code = "DUPLICATE_EMPLOYEE_NO"
-    message = "이미 등록된 사번입니다."
-    status_code = status.HTTP_400_BAD_REQUEST
-
-
 class LastAdminProtected(DomainError):
-    """specs/01 §5 — 마지막 활성 관리자 계정은 삭제·비활성화·역할 변경이 불가하다."""
+    """specs/01 AUTH-11 — 마지막 활성 관리자 계정은 삭제·비활성화·역할 변경이 불가하다."""
 
     code = "LAST_ADMIN_PROTECTED"
     message = "마지막 관리자 계정은 비활성화하거나 역할을 변경할 수 없습니다."
     status_code = status.HTTP_409_CONFLICT
-
-
-class SettingOutOfRange(DomainError):
-    code = "SETTING_OUT_OF_RANGE"
-    message = "설정값이 허용 범위를 벗어났습니다."
-    status_code = status.HTTP_400_BAD_REQUEST

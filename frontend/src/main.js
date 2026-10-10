@@ -4,11 +4,15 @@ import '@/assets/styles/adminhmd-theme.css'
 import '@/assets/styles/main.css'
 
 /*
- * 드롭다운(네비 계정 메뉴·알림 벨)은 data-bs-toggle="dropdown" 으로 동작한다.
- * CSS 만 가져오면 마크업은 그려지지만 열리지 않는다 — 로그아웃에 접근할 수 없었다.
- * 번들 전체 대신 쓰는 것만 가져온다(Popper 는 dropdown 이 의존해 함께 들어온다).
+ * Bootstrap JS 는 쓰는 것만 가져온다.
+ * - dropdown : 헤더 사용자 메뉴 (data-bs-toggle="dropdown")
+ * - collapse : 모바일 헤더의 기능 메뉴 접기
+ * - offcanvas: 모바일 관리자 메뉴
+ * CSS 만 가져오면 마크업은 그려지지만 열리지 않는다(이전 앱에서 로그아웃에 접근하지 못했다).
  */
 import 'bootstrap/js/dist/dropdown'
+import 'bootstrap/js/dist/collapse'
+import 'bootstrap/js/dist/offcanvas'
 
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
@@ -17,18 +21,22 @@ import App from './App.vue'
 import { setUnauthorizedHandler } from '@/api/client'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
 
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 
-// 401 이 오면 로컬 인증 상태를 비우고 로그인으로 보낸다 (specs/16 §6).
+const ui = useUiStore()
+ui.applyTheme()
+ui.watchSystemTheme()
+
+// 세션이 끊긴 채 API 를 부르면 소개 화면으로 보내고 로그인 패널을 연다 (specs/11 §1).
 setUnauthorizedHandler(() => {
   useAuthStore().clear()
   const current = router.currentRoute.value
-  if (current.name !== 'login') {
-    router.replace({ name: 'login', query: { redirect: current.fullPath } })
-  }
+  ui.openLogin(current.fullPath)
+  if (current.meta.requiresAuth) router.replace({ name: 'intro' })
 })
 
 app.mount('#app')

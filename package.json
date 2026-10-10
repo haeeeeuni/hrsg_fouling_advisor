@@ -1,7 +1,7 @@
 {
-  "name": "hrsg_fouling_advisor",
+  "name": "hrsg_reference_app",
   "version": "1.0.0",
-  "description": "복합화력 발전소 **HRSG(배열회수보일러) 가스측 오염도**를 운전 데이터에서 산출해, **세정 시점(D-day)** 과 **세정 편익(원)** 을 제시하는 사내 웹앱.",
+  "description": "HRSG 레퍼런스 앱 — 질의응답 · 계산기 · 플랜트 데이터 요청 체크리스트 (E2E 테스트 루트)",
   "main": "index.js",
   "directories": {
     "doc": "docs"

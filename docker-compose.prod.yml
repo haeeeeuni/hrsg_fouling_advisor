@@ -1,6 +1,6 @@
-# 운영 구성 (specs/18 §7).
-#   nginx → app(gunicorn) → postgres / redis
-#   worker(celery) 가 업로드 적재·분석·재학습·리포트를 맡는다.
+# 운영 구성 (specs/13 §6).
+#   nginx → app(gunicorn) → postgres(pgvector) / redis
+#   worker(celery) 가 문서 색인·가져오기를 맡는다.
 #
 # 구동 절차는 DEPLOY.md 참조. 개발용 인프라는 docker-compose.yml 이 따로 있다.
 
@@ -15,14 +15,11 @@ x-app-env: &app-env
   DB_PORT: 5432
   CELERY_BROKER_URL: redis://redis:6379/0
   CELERY_RESULT_BACKEND: redis://redis:6379/0
-  MEDIA_ROOT: /app/var/media
-  UPLOAD_ROOT: /app/var/uploads
-  REPORT_ROOT: /app/var/reports
-  MODEL_ARTIFACT_ROOT: /app/var/models
 
 services:
   db:
-    image: postgres:16-alpine
+    # pgvector 확장이 들어 있는 PostgreSQL 16 (specs/13 §6)
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${DB_NAME:-hrsg}
       POSTGRES_USER: ${DB_USER:-hrsg}
@@ -93,7 +90,7 @@ services:
       context: ./backend
     environment:
       <<: *app-env
-    # 분석·리포트는 메모리를 쓴다. 동시 실행 수를 낮게 잡고 필요시 올린다.
+    # 문서 색인은 임베딩 모델 때문에 메모리를 쓴다. 동시 실행 수를 낮게 잡고 필요시 올린다.
     command: celery -A config worker -l info --concurrency=2
     volumes:
       - appvar:/app/var

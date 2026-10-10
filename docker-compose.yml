@@ -1,7 +1,8 @@
 # 로컬 개발용 인프라. AGENTS.md §2 — SQLite는 운영·로컬·테스트 전부 금지.
 services:
   db:
-    image: postgres:16-alpine
+    # pgvector 확장이 들어 있는 PostgreSQL 16 (specs/13 §6)
+    image: pgvector/pgvector:pg16
     container_name: hrsg_db
     environment:
       POSTGRES_DB: ${DB_NAME:-hrsg}

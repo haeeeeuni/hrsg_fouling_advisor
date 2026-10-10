@@ -1,6 +1,6 @@
 /**
- * 공통 포맷터 (specs/16 §7).
- * 모든 금액·지수 표기는 반드시 이 모듈을 거친다(AC-16-5).
+ * 공통 포맷터 (specs/11 §7).
+ * 모든 금액·수치 표기는 반드시 이 모듈을 거친다.
  */
 import dayjs from 'dayjs'
 
@@ -21,12 +21,6 @@ function withThousands(value, digits = 0) {
   })
 }
 
-/** 오염도 지수: 소수 1자리 → `62.4` */
-export function formatFi(value) {
-  if (isBlank(value)) return EMPTY
-  return fixed(value, 1)
-}
-
 /** 금액: 천단위 구분 + 억 병기 → `768,200,000 원 (7.68억)` */
 export function formatCurrency(value, { withEok = true } = {}) {
   if (isBlank(value)) return EMPTY
@@ -35,8 +29,8 @@ export function formatCurrency(value, { withEok = true } = {}) {
   return `${base} (${fixed(value / 1e8, 2)}억)`
 }
 
-/** 차압: 소수 2자리 + kPa → `3.82 kPa` */
-export function formatDp(value) {
+/** 압력: 소수 2자리 + kPa → `3.82 kPa` */
+export function formatKpa(value) {
   if (isBlank(value)) return EMPTY
   return `${fixed(value, 2)} kPa`
 }
@@ -71,21 +65,6 @@ export function formatDateTime(value) {
   if (isBlank(value)) return EMPTY
   const d = dayjs(value)
   return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : EMPTY
-}
-
-/**
- * D-day 표기 (specs/08 §5, specs/16 §7).
- * - 이미 임계치에 도달 → `이미 도달`
- * - 추세 미확인 / 예측 불가 → `예측 불가`
- * - 그 외 → `D-84`
- */
-export function formatDday(days, status) {
-  if (status === 'ALREADY_EXCEEDED') return '이미 도달'
-  if (status === 'NO_TREND' || status === 'INSUFFICIENT_DATA') return '예측 불가'
-  if (status === 'BEYOND_HORIZON') return '2년 내 도달 예상 없음'
-  if (isBlank(days)) return EMPTY
-  if (days <= 0) return '이미 도달'
-  return `D-${Math.round(days)}`
 }
 
 /** 정수 건수: `52,560` */

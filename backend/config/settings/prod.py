@@ -1,4 +1,4 @@
-"""운영 설정. specs/18 §2 — DEBUG=False, ALLOWED_HOSTS 명시, 보안 헤더."""
+"""운영 설정. specs/13 §1 — DEBUG=False, ALLOWED_HOSTS 명시, 보안 헤더."""
 
 from .base import *  # noqa: F403
 from .base import SECRET_KEY, env_bool
@@ -18,7 +18,7 @@ if SECRET_KEY in _PLACEHOLDER_KEYS or len(SECRET_KEY) < _MIN_SECRET_KEY_LENGTH:
     raise RuntimeError(
         f"DJANGO_SECRET_KEY 가 안전하지 않습니다"
         f"(예시값이거나 {_MIN_SECRET_KEY_LENGTH}자 미만 — 현재 {len(SECRET_KEY)}자). "
-        "운영 환경에서는 충분히 길고 무작위한 값을 지정해야 합니다(specs/18 §2).\n"
+        "운영 환경에서는 충분히 길고 무작위한 값을 지정해야 합니다(specs/13 §1).\n"
         '생성: python -c "import secrets; print(secrets.token_urlsafe(64))"'
     )
 
@@ -29,7 +29,7 @@ CORS_ALLOW_CREDENTIALS = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# specs/18 §2 가 Secure 쿠키와 HSTS 를 요구하므로 HTTPS 가 전제다.
+# specs/13 §1 이 Secure 쿠키와 HSTS 를 요구하므로 HTTPS 가 전제다.
 # TLS 를 앞단(LB)에서 끊고 이미 리다이렉트까지 처리한다면 환경변수로 끌 수 있다.
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
 # 헬스체크는 컨테이너 내부에서 http 로 들어온다. 리다이렉트되면 기동 판정이 실패한다.

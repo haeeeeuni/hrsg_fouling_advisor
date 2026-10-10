@@ -1,4 +1,4 @@
-"""헬스체크 (specs/18 §3, §7). PostgreSQL 필요."""
+"""헬스체크 (specs/13 §6). PostgreSQL 필요."""
 
 from unittest.mock import patch
 
@@ -42,3 +42,13 @@ def test_health_does_not_leak_internals(api):
 
     for leaked in ("Traceback", "psycopg", "/app/", "postgres://"):
         assert leaked not in body
+
+
+def test_readiness_checks_vector_extension(api):
+    """AC-13-5 — pgvector 확장이 없으면 준비되지 않은 것으로 보고한다."""
+    assert api.get(READY).data["checks"]["vector"] is True
+
+    with patch("common.views_health._check_vector_extension", return_value=False):
+        res = api.get(READY)
+
+    assert res.status_code == 503

@@ -1,4 +1,4 @@
-# E2E (Playwright + Chrome) — specs/21 §7.
+# E2E (Playwright + Chrome) — specs/14 §4.3.
 # 로컬과 같은 전체 스택(PostgreSQL · Redis · Django · Celery · Vite)을 띄우고 tests/ 를 돌린다.
 name: E2E (Playwright)
 
@@ -16,7 +16,8 @@ jobs:
 
     services:
       db:
-        image: postgres:16
+        # pgvector 확장이 들어 있는 PostgreSQL 16 (specs/13 §6)
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_DB: hrsg
           POSTGRES_USER: hrsg
@@ -34,7 +35,8 @@ jobs:
       DJANGO_SETTINGS_MODULE: config.settings.dev
       DB_HOST: localhost
       CELERY_BROKER_URL: redis://localhost:6379/0
-      E2E_PYTHON: python
+      # E2E 는 한 IP 에서 가입을 여러 번 한다. 운영 기본값(시간당 10회)을 테스트에서만 올린다.
+      THROTTLE_SIGNUP: 1000/hour
 
     steps:
       - uses: actions/checkout@v4

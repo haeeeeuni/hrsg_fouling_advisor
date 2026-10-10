@@ -1,17 +1,40 @@
 <script setup>
+/** 내 정보 — 성명·소속·이메일 수정, 비밀번호 변경 (specs/01 §8, specs/10 §2). */
 import { ref } from 'vue'
 
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
-import { formatDateTime } from '@/utils/format'
 import { ROLE } from '@/utils/constants'
+import { formatDateTime } from '@/utils/format'
 
 const auth = useAuthStore()
 const toast = useToast()
 
+const profile = ref({
+  fullName: auth.user?.full_name ?? '',
+  organization: auth.user?.organization ?? '',
+  email: auth.user?.email ?? '',
+})
+const profileSaving = ref(false)
+const profileError = ref(null)
+
 const form = ref({ currentPassword: '', newPassword: '', confirmPassword: '' })
 const submitting = ref(false)
 const error = ref(null)
+
+async function saveProfile() {
+  if (profileSaving.value) return
+  profileSaving.value = true
+  profileError.value = null
+  try {
+    await auth.updateProfile(profile.value)
+    toast.push('내 정보를 저장했습니다.', 'success')
+  } catch (err) {
+    profileError.value = err.parsed ?? { message: '저장에 실패했습니다.', details: {} }
+  } finally {
+    profileSaving.value = false
+  }
+}
 
 async function onSubmit() {
   if (submitting.value) return
@@ -39,33 +62,61 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div>
+  <div class="ui-container">
+    <h1 class="h3 mb-4">내 정보</h1>
+
     <div class="row g-4">
-      <div class="col-12 col-xl-5">
+      <div class="col-12 col-xl-6">
         <div class="card h-100">
           <div class="card-body">
             <h2 class="h6 mb-3">계정</h2>
-            <dl class="row mb-0 small">
-              <dt class="col-4 text-secondary">성명</dt>
-              <dd class="col-8">{{ auth.user?.full_name }}</dd>
-
-              <dt class="col-4 text-secondary">사번</dt>
-              <dd class="col-8">{{ auth.user?.employee_no }}</dd>
-
+            <dl class="row small mb-3">
+              <dt class="col-4 text-secondary">ID</dt>
+              <dd class="col-8">{{ auth.user?.username }}</dd>
               <dt class="col-4 text-secondary">역할</dt>
               <dd class="col-8">{{ ROLE[auth.user?.role] ?? auth.user?.role }}</dd>
-
-              <dt class="col-4 text-secondary">부서</dt>
-              <dd class="col-8">{{ auth.user?.department || '–' }}</dd>
-
               <dt class="col-4 text-secondary">최근 로그인</dt>
-              <dd class="col-8">{{ formatDateTime(auth.user?.last_login_at) }}</dd>
+              <dd class="col-8 mb-0">{{ formatDateTime(auth.user?.last_login_at) }}</dd>
             </dl>
+
+            <form novalidate @submit.prevent="saveProfile">
+              <div class="mb-3">
+                <label for="pfName" class="form-label">성명</label>
+                <input id="pfName" v-model.trim="profile.fullName" class="form-control" autocomplete="name" />
+              </div>
+              <div class="mb-3">
+                <label for="pfOrg" class="form-label">소속</label>
+                <input
+                  id="pfOrg"
+                  v-model.trim="profile.organization"
+                  class="form-control"
+                  autocomplete="organization"
+                />
+              </div>
+              <div class="mb-3">
+                <label for="pfEmail" class="form-label">이메일</label>
+                <input id="pfEmail" v-model.trim="profile.email" type="email" class="form-control" autocomplete="email" />
+              </div>
+
+              <div v-if="profileError" class="alert alert-danger py-2 small" role="alert">
+                {{ profileError.message }}
+                <ul v-if="Object.keys(profileError.details ?? {}).length" class="mb-0 mt-1 ps-3">
+                  <li v-for="(messages, field) in profileError.details" :key="field">
+                    {{ [].concat(messages).join(' ') }}
+                  </li>
+                </ul>
+              </div>
+
+              <button class="btn btn-primary" type="submit" :disabled="profileSaving">
+                <span v-if="profileSaving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                저장
+              </button>
+            </form>
           </div>
         </div>
       </div>
 
-      <div class="col-12 col-xl-7">
+      <div class="col-12 col-xl-6">
         <div class="card h-100">
           <div class="card-body">
             <h2 class="h6 mb-3">비밀번호 변경</h2>
@@ -91,9 +142,10 @@ async function onSubmit() {
                   type="password"
                   class="form-control"
                   autocomplete="new-password"
+                  aria-describedby="newPasswordHelp"
                   required
                 />
-                <div class="form-text">최소 4자 이상. 8자 이상을 권장합니다.</div>
+                <div id="newPasswordHelp" class="form-text">8자 이상, 숫자만으로는 만들 수 없습니다.</div>
               </div>
 
               <div class="mb-3">
@@ -116,7 +168,7 @@ async function onSubmit() {
               </div>
 
               <button class="btn btn-primary" type="submit" :disabled="submitting">
-                <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                <span v-if="submitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 변경
               </button>
             </form>

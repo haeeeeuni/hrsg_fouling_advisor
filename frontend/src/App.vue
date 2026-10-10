@@ -1,39 +1,25 @@
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-
-import AppNavbar from '@/components/common/AppNavbar.vue'
-import AppSidebar from '@/components/common/AppSidebar.vue'
+import AppHeader from '@/components/common/AppHeader.vue'
+import PasswordChangeBanner from '@/components/common/PasswordChangeBanner.vue'
 import ToastContainer from '@/components/common/ToastContainer.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const route = useRoute()
-
-// 로그인 화면과 부팅 전에는 셸(사이드바·네비)을 감춘다.
-const showShell = computed(() => auth.isAuthenticated && route.name !== 'login')
 </script>
 
 <template>
-  <div v-if="!auth.initialized" class="d-flex justify-content-center align-items-center vh-100">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">불러오는 중</span>
-    </div>
-  </div>
+  <!-- 레이아웃 (specs/11 §4): 상단 바 + 본문. 관리자 모드는 본문 안에 사이드바를 둔다. -->
+  <AppHeader />
+  <PasswordChangeBanner />
 
-  <!--
-    셸 레이아웃 (specs/20): 전체 높이 고정 사이드바(좌) + 메인 영역 상단 네비.
-    사이드바가 fixed 라서 메인이 .ui-main 의 margin-left 로 자리를 비운다.
-  -->
-  <template v-else>
-    <AppSidebar v-if="showShell" />
-    <div :class="showShell ? 'ui-main' : 'ui-main ui-main--bare'">
-      <AppNavbar v-if="showShell" />
-      <main :class="showShell ? 'ui-content' : ''">
-        <RouterView />
-      </main>
+  <main class="ui-main">
+    <div v-if="!auth.initialized" class="d-flex justify-content-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">불러오는 중</span>
+      </div>
     </div>
-  </template>
+    <RouterView v-else />
+  </main>
 
   <ToastContainer />
 </template>

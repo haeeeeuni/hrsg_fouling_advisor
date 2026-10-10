@@ -1,7 +1,7 @@
 /**
- * axios 인스턴스 (specs/16 §1, §6).
+ * axios 인스턴스 (specs/11 §5).
  * - 세션 쿠키 + CSRF 토큰 방식이므로 withCredentials 가 필수다.
- * - 401 응답은 auth 스토어를 초기화하고 /login 으로 보낸다.
+ * - 401 응답은 auth 스토어를 초기화하고 소개 화면에서 로그인 패널을 연다.
  * 컴포넌트는 axios 를 직접 쓰지 않고 api/*.js 모듈만 사용한다(AGENTS.md §4).
  */
 import axios from 'axios'
@@ -21,7 +21,7 @@ export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler
 }
 
-/** 서버 공통 에러 포맷을 꺼낸다 (specs/15 §1). */
+/** 서버 공통 에러 포맷을 꺼낸다 (specs/10 §1). */
 export function extractError(error) {
   const payload = error?.response?.data?.error
   if (payload) {
@@ -42,8 +42,8 @@ client.interceptors.response.use(
   (error) => {
     const status = error?.response?.status
     const url = error?.config?.url ?? ''
-    // /auth/me/ 는 부팅 시 세션 확인용이라 401 이 정상 흐름이다. 리디렉션하지 않는다.
-    if (status === 401 && !url.includes('/auth/me')) {
+    // 로그인·세션 확인 요청의 401 은 화면이 직접 처리한다. 리디렉션하지 않는다.
+    if (status === 401 && !url.includes('/auth/')) {
       onUnauthorized?.()
     }
     error.parsed = extractError(error)

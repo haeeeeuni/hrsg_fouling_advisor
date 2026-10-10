@@ -1,6 +1,6 @@
-"""로그 마스킹 테스트 (AC-18-3).
+"""로그 마스킹 테스트 (specs/13 AC-13-4).
 
-로그에 비밀번호·전체 사번이 남지 않아야 한다.
+로그에 비밀번호·API 키가 남지 않아야 한다.
 """
 
 import logging
@@ -27,15 +27,22 @@ def test_password_values_are_masked(text):
     assert "***" in masked
 
 
-def test_employee_no_is_partially_masked():
-    masked = mask("login failed for ADM01")
+@pytest.mark.parametrize(
+    "secret",
+    ["sk-ant-api03-abcdefghijklmnop", "sk-proj-1234567890abcdef", "AIzaSyA1234567890abcdefghijk"],
+)
+def test_llm_api_keys_are_masked_even_without_field_name(secret):
+    masked = mask(f"provider error with {secret} in message")
 
-    assert "ADM01" not in masked
-    assert "AD***" in masked
+    assert secret not in masked
+
+
+def test_api_key_field_is_masked():
+    assert "abc123" not in mask("api_key=abc123")
 
 
 def test_ordinary_text_is_left_alone():
-    assert mask("분석 실행이 완료되었습니다.") == "분석 실행이 완료되었습니다."
+    assert mask("문서 색인이 완료되었습니다.") == "문서 색인이 완료되었습니다."
 
 
 def test_filter_rewrites_record_message():
@@ -45,7 +52,7 @@ def test_filter_rewrites_record_message():
         pathname=__file__,
         lineno=1,
         msg="user %s password=%s",
-        args=("ADM01", "qwer"),
+        args=("admin", "qwer"),
         exc_info=None,
     )
 
@@ -53,6 +60,5 @@ def test_filter_rewrites_record_message():
 
     message = record.getMessage()
     assert "qwer" not in message
-    assert "ADM01" not in message
     # args 를 비워 원본이 다른 핸들러에서 다시 살아나지 않게 한다.
     assert record.args == ()

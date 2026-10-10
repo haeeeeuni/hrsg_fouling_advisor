@@ -1,9 +1,9 @@
-"""감사 로그 기록 유틸 (specs/13 §7).
+"""감사 로그 기록 유틸 (specs/08 ADM-6).
 
 DRF 뷰셋에 `AuditedModelMixin` 을 섞으면 생성·수정·삭제가 자동으로 남는다.
 커스텀 액션은 `record()` 를 직접 호출한다.
 
-**민감정보는 남기지 않는다**(AGENTS.md §7) — password 계열 필드는 스냅샷에서 제외한다.
+**민감정보는 남기지 않는다**(AGENTS.md §7) — 비밀번호·API 키·원본 파일 필드는 스냅샷에서 제외한다.
 """
 
 from __future__ import annotations
@@ -17,8 +17,18 @@ from common.models import AuditAction, AuditLog
 
 logger = logging.getLogger(__name__)
 
-# 스냅샷에서 제외할 필드 (비밀번호·해시는 절대 남기지 않는다)
-SENSITIVE_FIELDS = {"password", "passwd", "pwd", "new_password", "current_password", "token"}
+# 스냅샷에서 제외할 필드 (비밀번호·해시·API 키·문서 원본은 절대 남기지 않는다)
+SENSITIVE_FIELDS = {
+    "password",
+    "passwd",
+    "pwd",
+    "new_password",
+    "current_password",
+    "token",
+    "api_key",
+    "api_key_encrypted",
+    "original_file",
+}
 
 
 def client_ip(request: Request | None) -> str | None:

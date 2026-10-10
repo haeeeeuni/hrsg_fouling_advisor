@@ -1,4 +1,4 @@
-"""감사 로그 (specs/13 §7). 일부 DB 불필요."""
+"""감사 로그 (specs/08 ADM-6). 일부 DB 불필요."""
 
 import pytest
 
@@ -72,21 +72,21 @@ def test_record_creates_log(admin_user):
         request=Req(),
         action="UPDATE",
         target_type="Setting",
-        target_id="fouling_threshold",
-        target_label="오염도 임계치",
-        before={"value": "60"},
-        after={"value": "50"},
+        target_id="login_max_failures",
+        target_label="로그인 연속 실패 허용 횟수",
+        before={"value": "5"},
+        after={"value": "7"},
     )
 
     assert log is not None
     assert log.actor == admin_user
     assert log.ip == "10.0.0.1"
-    assert log.before == {"value": "60"}
+    assert log.before == {"value": "5"}
 
 
 @pytest.mark.django_db
 def test_record_without_request_has_no_actor():
-    log = audit.record(request=None, action="CREATE", target_type="Unit", target_id=1)
+    log = audit.record(request=None, action="CREATE", target_type="User", target_id=1)
 
     assert log.actor is None
     assert log.ip is None
@@ -96,7 +96,7 @@ def test_record_without_request_has_no_actor():
 def test_audit_log_api_is_admin_only(api, normal_user):
     api.force_authenticate(normal_user)
 
-    assert api.get("/api/audit-logs/").status_code == 403
+    assert api.get("/api/admin/audit-logs/").status_code == 403
 
 
 @pytest.mark.django_db
@@ -106,12 +106,12 @@ def test_audit_log_api_lists_and_filters(api, admin_user):
         META = {}
 
     audit.record(request=Req(), action="UPDATE", target_type="Setting", target_id="a")
-    audit.record(request=Req(), action="CREATE", target_type="Unit", target_id="1")
+    audit.record(request=Req(), action="CREATE", target_type="User", target_id="1")
     api.force_authenticate(admin_user)
 
-    assert api.get("/api/audit-logs/").data["count"] == 2
-    assert api.get("/api/audit-logs/", {"target_type": "Unit"}).data["count"] == 1
-    assert api.get("/api/audit-logs/", {"action": "UPDATE"}).data["count"] == 1
+    assert api.get("/api/admin/audit-logs/").data["count"] == 2
+    assert api.get("/api/admin/audit-logs/", {"target_type": "User"}).data["count"] == 1
+    assert api.get("/api/admin/audit-logs/", {"action": "UPDATE"}).data["count"] == 1
 
 
 @pytest.mark.django_db
@@ -120,9 +120,26 @@ def test_audit_log_includes_actor_name(api, admin_user):
         user = admin_user
         META = {}
 
-    audit.record(request=Req(), action="CREATE", target_type="Unit", target_id="1")
+    audit.record(request=Req(), action="CREATE", target_type="User", target_id="1")
     api.force_authenticate(admin_user)
 
-    row = api.get("/api/audit-logs/").data["results"][0]
+    row = api.get("/api/admin/audit-logs/").data["results"][0]
     assert row["actor_name"] == admin_user.full_name
     assert row["action_label"] == "생성"
+
+
+def test_api_key_fields_are_never_snapshotted():
+    """LLM API 키·문서 원본은 감사 로그에 남기지 않는다 (specs/08 ADM-6)."""
+
+    class Fake:
+        class _meta:
+            fields = []
+
+    obj = Fake()
+    obj.api_key_encrypted = "gAAAA..."
+    obj.original_file = b"%PDF"
+    obj.model_name = "claude-opus-5-5"
+
+    result = audit.snapshot(obj, fields=["api_key_encrypted", "original_file", "model_name"])
+
+    assert result == {"model_name": "claude-opus-5-5"}

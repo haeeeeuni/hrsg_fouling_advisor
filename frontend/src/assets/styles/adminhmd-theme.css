@@ -1,17 +1,19 @@
 /**
- * AdminHMD 테마 (specs/20).
+ * AdminHMD 테마 + 라이트/다크 (specs/12).
  *
  * https://themewagon.com/themes/adminhmd/ 의 Bootstrap 5.3 관리자 템플릿에서
  * 디자인 토큰과 컴포넌트 스타일만 가져온다. 템플릿 마크업은 쓰지 않는다.
  *
  * Bootstrap 의 `--bs-*` 변수를 덮어써서 기존 유틸리티 클래스(btn-primary,
  * text-bg-success, table 등)가 손대지 않아도 테마를 따라가게 한다.
+ * 다크 모드는 Bootstrap 5.3 컬러 모드(<html data-bs-theme="dark">)를 쓰고,
+ * 여기서는 --admin-* 토큰만 다시 정의한다(§다크 토큰).
  *
- * 셸 클래스는 `ui-` 접두를 쓴다 — 테마 이름을 붙이면 교체할 때마다 화면
- * 21종의 마크업을 전부 고쳐야 한다. 테마를 바꿀 때는 이 파일만 갈아 끼운다.
+ * 셸 클래스는 `ui-` 접두를 쓴다 — 테마를 바꿀 때 이 파일만 갈아 끼우기 위해서다.
  */
 
-:root {
+:root,
+[data-bs-theme='light'] {
   /* --- AdminHMD 토큰 (템플릿 assets/css/style.css 의 :root) --- */
   --admin-bg: #f5f7fb;
   --admin-surface: #ffffff;
@@ -21,25 +23,46 @@
   --admin-muted: #6b7280;
   --admin-primary: #2563eb;
   --admin-primary-dark: #1d4ed8;
+  /* 글자로 쓰는 강조색. 라이트는 primary 와 같고 다크에서 밝아진다(대비 4.5:1). */
+  --admin-primary-text: #2563eb;
   --admin-sidebar: #111827;
   --admin-sidebar-soft: #1f2937;
   --admin-shadow-sm: 0 10px 24px rgba(15, 23, 42, 0.06);
   --admin-shadow: 0 18px 46px rgba(15, 23, 42, 0.09);
-  --admin-shadow-lg: 0 26px 70px rgba(15, 23, 42, 0.12);
   --admin-ring: 0 0 0 0.25rem rgba(37, 99, 235, 0.12);
+  --admin-scrollbar: #cbd5e1;
 
   --sidebar-muted: #9aa8bd;
+}
 
-  /*
-   * 템플릿은 8px 하나로 거의 통일돼 있다(27개 규칙 중 27개). Spark 의
-   * 24px 라운드에서 각진 쪽으로 바뀌는 것이 이 테마의 가장 큰 인상 차이다.
-   */
+/* --- 다크 토큰 (specs/12 UI-5). 대비 실측은 specs/12 §4 에 기록한다. --- */
+[data-bs-theme='dark'] {
+  --admin-bg: #0f172a;
+  --admin-surface: #172033;
+  --admin-surface-soft: #1e293b;
+  --admin-border: #2c3a52;
+  --admin-text: #e5e7eb;
+  --admin-muted: #a3acb9;
+  --admin-primary: #2563eb;
+  --admin-primary-dark: #1d4ed8;
+  --admin-primary-text: #7aa7ff;
+  --admin-sidebar: #0b1220;
+  --admin-sidebar-soft: #1e293b;
+  --admin-shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --admin-shadow: 0 18px 46px rgba(0, 0, 0, 0.45);
+  --admin-ring: 0 0 0 0.25rem rgba(122, 167, 255, 0.25);
+  --admin-scrollbar: #334155;
+}
+
+:root,
+[data-bs-theme] {
   --radius-lg: 10px;
   --radius-md: 8px;
   --radius-sm: 6px;
 
-  --sidebar-width: 280px;
-  --navbar-height: 80px;
+  --header-height: 64px;
+  --admin-sidebar-width: 240px;
+  --container-max: 1200px;
 
   /* --- Bootstrap 변수 덮어쓰기 --- */
   --bs-body-bg: var(--admin-bg);
@@ -49,8 +72,9 @@
   --bs-border-radius: var(--radius-md);
   --bs-border-radius-lg: var(--radius-lg);
   --bs-border-radius-xl: var(--radius-lg);
-  --bs-link-color: var(--admin-primary);
-  --bs-link-hover-color: var(--admin-primary-dark);
+  --bs-link-color: var(--admin-primary-text);
+  --bs-link-color-rgb: var(--admin-primary-text-rgb, 37, 99, 235);
+  --bs-link-hover-color: var(--admin-primary-text);
 
   /*
    * 템플릿은 "Segoe UI", Arial 시스템 스택을 쓴다(웹폰트 없음).
@@ -61,19 +85,23 @@
     'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
 
   /*
-   * primary 만 템플릿의 블루로 바꾼다.
-   * success/warning/danger 는 FI 등급(정상/주의/경고)의 의미 색이라 건드리지 않는다
-   * (specs/20 "등급 색은 테마보다 우선한다"). 템플릿이 정의한 --admin-success
-   * (#0f766e, 청록)를 가져오면 '정상' 으로 읽히지 않아 등급 판독이 무너진다.
+   * primary 만 템플릿의 블루로 바꾼다. success/warning/danger 는 정상·주의·위험의
+   * 의미 색이라 건드리지 않는다(specs/12 UI-6). 템플릿의 --admin-success(청록)를 가져오면
+   * '정상' 으로 읽히지 않는다.
    */
   --bs-primary: var(--admin-primary);
   --bs-primary-rgb: 37, 99, 235;
+}
+
+[data-bs-theme='dark'] {
+  --admin-primary-text-rgb: 122, 167, 255;
 }
 
 body {
   font-size: 0.925rem;
   letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
+  background-color: var(--admin-bg);
 }
 
 h1,
@@ -95,65 +123,286 @@ h6 {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--admin-scrollbar);
   border-radius: 10px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
 
-/* -------------------------------------------------- 셸 레이아웃 */
+/* -------------------------------------------------- 상단 바 (specs/11 §3) */
 
-.ui-sidebar {
-  width: var(--sidebar-width);
-  background-color: var(--admin-sidebar);
-  height: 100vh;
-  position: fixed;
+.ui-header {
+  position: sticky;
   top: 0;
-  left: 0;
   z-index: 1030;
-  display: flex;
-  flex-direction: column;
-  padding: 1.75rem 1.25rem;
-  overflow-y: auto;
+  min-height: var(--header-height);
+  background-color: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border);
+  padding: 0;
 }
 
-.ui-main {
-  margin-left: var(--sidebar-width);
-  min-height: 100vh;
-  min-width: 0;
+.ui-header-inner {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0.6rem 1rem;
+  gap: 0.75rem;
 }
-
-/* 셸이 없는 화면(로그인)은 사이드바 자리를 비우지 않는다. */
-.ui-main--bare {
-  margin-left: 0;
-}
-
-.ui-content {
-  padding: 1.5rem 2rem 2.5rem;
-}
-
-/* -------------------------------------------------- 사이드바 */
 
 .ui-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  color: #ffffff;
+  gap: 0.6rem;
+  color: var(--admin-text);
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
-  padding: 0 0.5rem 1.75rem;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .ui-brand:hover {
-  color: #ffffff;
+  color: var(--admin-text);
 }
 
 .ui-brand i {
   color: var(--admin-primary);
-  font-size: 1.4rem;
+  font-size: 1.35rem;
+}
+
+.ui-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.ui-feature-nav {
+  gap: 0.25rem;
+}
+
+.ui-feature-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--admin-muted);
+  font-weight: 600;
+}
+
+.ui-feature-nav .nav-link:hover {
+  color: var(--admin-text);
+  background-color: var(--admin-surface-soft);
+}
+
+/* 활성 항목은 색뿐 아니라 배경 블록으로도 구분한다 (specs/12 UI-6). */
+.ui-feature-nav .nav-link.active {
+  color: var(--admin-primary-text);
+  background-color: var(--admin-surface-soft);
+  box-shadow: inset 0 -2px 0 var(--admin-primary);
+}
+
+/* 아이콘만 있는 버튼. 터치 대상 44px (specs/12 §5). */
+.ui-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  background-color: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: 1.15rem;
+}
+
+.ui-icon-button:hover {
+  background-color: var(--admin-surface-soft);
+}
+
+.ui-icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--admin-ring);
+}
+
+/* 사용자 메뉴 등 보조 컨트롤 */
+.ui-pill {
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.ui-pill:hover,
+.ui-pill:focus,
+.ui-pill.show {
+  background-color: var(--admin-surface-soft);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+
+/* -------------------------------------------------- 로그인 패널 */
+
+.ui-login {
+  position: relative;
+}
+
+.ui-login > .btn {
+  min-height: 44px;
+}
+
+.ui-login-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 1060;
+  width: 20rem;
+  box-shadow: var(--admin-shadow);
+}
+
+/* 좁은 화면에서는 헤더 아래 전체 폭 시트 */
+@media (max-width: 575.98px) {
+  .ui-login {
+    position: static;
+  }
+
+  .ui-login-panel {
+    position: fixed;
+    top: calc(var(--header-height) + 0.25rem);
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+
+  /* 좁은 화면에서는 사용자 메뉴를 아이콘만 남겨 헤더가 한 줄에 들어가게 한다. 이름은 메뉴 안에 있다. */
+  .ui-user-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .ui-brand span {
+    font-size: 0.95rem;
+  }
+}
+
+/* -------------------------------------------------- 본문 */
+
+.ui-main {
+  min-height: calc(100vh - var(--header-height));
+}
+
+.ui-container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 1.75rem 1rem 3rem;
+}
+
+.ui-narrow {
+  max-width: 760px;
+}
+
+.ui-banner .ui-container {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.ui-hero {
+  padding: 2.5rem 0 2.5rem;
+}
+
+.ui-eyebrow {
+  color: var(--admin-primary-text);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.ui-hero-title {
+  font-size: clamp(1.9rem, 5vw, 2.75rem);
+  margin-bottom: 1rem;
+}
+
+.ui-hero-lead {
+  font-size: 1.05rem;
+  color: var(--admin-muted);
+  max-width: 44rem;
+  margin-bottom: 1.5rem;
+}
+
+.ui-section-title {
+  font-size: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.ui-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-md);
+  background-color: var(--admin-surface-soft);
+  color: var(--admin-primary-text);
+  font-size: 1.5rem;
+}
+
+.ui-feature-card {
+  color: var(--admin-text);
+  transition: border-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.ui-feature-card:hover,
+.ui-feature-card:focus-visible {
+  border-color: var(--admin-primary);
+  color: var(--admin-text);
+}
+
+.ui-feature-card .card-footer {
+  color: var(--admin-primary-text);
+}
+
+/* -------------------------------------------------- 관리자 모드 (specs/11 §4) */
+
+.ui-admin {
+  display: flex;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.ui-admin-content {
+  flex: 1;
+  min-width: 0;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.ui-sidebar {
+  --bs-offcanvas-bg: var(--admin-sidebar);
+  --bs-offcanvas-width: 280px;
+  background-color: var(--admin-sidebar);
+}
+
+@media (min-width: 992px) {
+  .ui-sidebar {
+    position: sticky;
+    top: var(--header-height);
+    align-self: flex-start;
+    width: var(--admin-sidebar-width);
+    height: calc(100vh - var(--header-height));
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+  }
+
+  .ui-admin-content {
+    padding: 1.75rem 2rem 3rem;
+  }
 }
 
 .ui-menu-title {
@@ -170,17 +419,14 @@ h6 {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.7rem 0.75rem;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
   border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
-}
-
-.ui-menu-link i {
-  font-size: 1.05rem;
 }
 
 .ui-menu-link:hover {
@@ -188,93 +434,17 @@ h6 {
   color: #ffffff;
 }
 
-/*
- * 활성 항목은 채워진 블록이다. 색뿐 아니라 '배경이 있다/없다' 로도 구분되므로
- * 색상만으로 정보를 전달하지 않는다는 규칙을 만족한다 (specs/16 §8).
- */
+/* 활성 항목은 채워진 블록 — 색뿐 아니라 '배경이 있다/없다' 로도 구분된다. */
 .ui-menu-link.active {
   background-color: var(--admin-primary);
   color: #ffffff;
   font-weight: 600;
 }
 
-.ui-menu-link.active i {
-  color: #ffffff;
-}
-
-/*
- * 관리자 콘솔 하위 메뉴. 부모 아래로 들여쓰고 왼쪽 선으로 묶어 계층을 보여준다 —
- * 활성 표시가 색뿐 아니라 위치로도 구분되게 한다 (specs/16 §8).
- */
-.ui-menu-sub {
-  margin: 0.25rem 0 0.5rem 1.4rem;
-  padding-left: 0.65rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.ui-menu-link--sub {
-  padding: 0.42rem 0.6rem;
-  font-size: 0.82rem;
-  gap: 0;
-}
-
-.ui-sidebar-footer {
-  margin-top: auto;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--sidebar-muted);
-  font-size: 0.78rem;
-}
-
-.ui-sidebar-footer .ui-user-name {
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-/* -------------------------------------------------- 상단 네비 */
-
-/* 템플릿은 네비를 흰 표면으로 두고 아래 경계선으로 본문과 나눈다. */
-.ui-navbar {
-  height: var(--navbar-height);
-  background-color: var(--admin-surface);
-  border-bottom: 1px solid var(--admin-border);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0 2rem;
-}
-
-.ui-page-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin-bottom: 0;
-  letter-spacing: -0.025em;
-}
-
-/* 네비의 보조 컨트롤 (호기 선택·계정 메뉴). 템플릿은 각진 8px 이다. */
-.ui-pill {
-  background-color: var(--admin-surface);
-  border: 1px solid var(--admin-border);
-  border-radius: var(--radius-md);
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--admin-text);
-}
-
-.ui-pill:focus {
-  border-color: var(--admin-primary);
-  box-shadow: var(--admin-ring);
-}
-
-select.ui-pill {
-  padding-right: 2.25rem;
-}
-
-/* -------------------------------------------------- 카드 */
+/* -------------------------------------------------- 카드 · 통계 */
 
 .card {
+  --bs-card-bg: var(--admin-surface);
   background-color: var(--admin-surface);
   border: 1px solid var(--admin-border);
   border-radius: var(--radius-md);
@@ -287,23 +457,6 @@ select.ui-pill {
   font-weight: 700;
 }
 
-.card-title {
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-/* 한 화면에 하나만 쓰는 어두운 강조 카드 */
-.ui-card-dark {
-  background-color: var(--admin-sidebar-soft);
-  border-color: var(--admin-sidebar-soft);
-  color: #ffffff;
-}
-
-.ui-card-dark .text-muted,
-.ui-card-dark .text-secondary {
-  color: rgba(255, 255, 255, 0.68) !important;
-}
-
 .ui-stat-label {
   font-size: 0.85rem;
   color: var(--admin-muted);
@@ -312,97 +465,42 @@ select.ui-pill {
 }
 
 .ui-stat-value {
-  font-size: 1.9rem;
+  font-size: 2.25rem;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
-.ui-card-dark .ui-stat-label {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.ui-card-dark .ui-stat-value {
-  color: #ffffff;
-}
-
-/* -------------------------------------------------- 설명(?) */
-
-.ui-help-wrap {
-  position: relative;
-  display: inline-flex;
-  vertical-align: middle;
-}
-
-.ui-help {
+/*
+ * 단계 번호 원형 표식.
+ * .badge 는 가로·세로 패딩이 달라 rounded-circle 을 줘도 타원이 된다. 너비·높이를 고정한다.
+ */
+.ui-step {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  padding: 0;
-  border: 1px solid var(--admin-border);
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 50%;
-  background-color: var(--admin-surface);
-  color: var(--admin-muted);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
   line-height: 1;
-  cursor: pointer;
+  background-color: var(--admin-border);
+  color: var(--admin-text);
 }
 
-.ui-help:hover,
-.ui-help[aria-expanded='true'] {
-  border-color: var(--admin-primary);
+.ui-step--ready {
   background-color: var(--admin-primary);
   color: #ffffff;
-}
-
-.ui-help:focus-visible {
-  outline: none;
-  box-shadow: var(--admin-ring);
-}
-
-/* 어두운 카드 위에서는 반전시킨다. */
-.ui-card-dark .ui-help {
-  border-color: rgba(255, 255, 255, 0.3);
-  background-color: transparent;
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.ui-help-pop {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1055;
-  width: 19rem;
-  max-width: 78vw;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--admin-border);
-  border-radius: var(--radius-md);
-  background-color: var(--admin-surface);
-  box-shadow: var(--admin-shadow);
-  color: var(--admin-text);
-  font-size: 0.79rem;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: 0;
-  text-align: left;
-  white-space: normal;
-}
-
-/* 화면 오른쪽 끝 카드에서 잘리지 않게 한다. */
-.ui-help-pop--end {
-  left: auto;
-  right: 0;
-  transform: none;
 }
 
 /* -------------------------------------------------- 표 */
 
 .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--admin-text);
   --bs-table-border-color: var(--admin-border);
   margin-bottom: 0;
 }
@@ -421,9 +519,18 @@ select.ui-pill {
   background-color: var(--admin-surface-soft);
 }
 
-.table caption {
-  color: var(--admin-muted);
-  caption-side: bottom;
+/*
+ * 표만 가로로 스크롤한다(specs/12 §5). 안의 visually-hidden(절대 위치) 글자가 스크롤 상자 밖을
+ * 기준으로 배치되면 페이지 전체에 가로 스크롤이 생긴다 — 상자를 기준 위치로 잡는다.
+ */
+.table-responsive {
+  position: relative;
+}
+
+/* 스크롤 상자 안에서는 칸을 줄바꿈하지 않는다 — 좁은 화면에서 한 글자씩 세로로 끊기지 않게. */
+.table-responsive .table th,
+.table-responsive .table td {
+  white-space: nowrap;
 }
 
 /* -------------------------------------------------- 버튼 · 배지 · 폼 */
@@ -447,24 +554,6 @@ select.ui-pill {
   color: #ffffff;
 }
 
-/*
- * 화면에서 가장 강한 행동 유도(대시보드의 "분석 실행").
- * 테마마다 액센트가 달라 별도 클래스로 둔다 — Spark 에서는 라임이었다.
- */
-.btn-accent {
-  background-color: var(--admin-primary);
-  border-color: var(--admin-primary);
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.btn-accent:hover,
-.btn-accent:focus {
-  background-color: var(--admin-primary-dark);
-  border-color: var(--admin-primary-dark);
-  color: #ffffff;
-}
-
 .btn-outline-secondary {
   border-color: var(--admin-border);
   color: var(--admin-muted);
@@ -476,37 +565,15 @@ select.ui-pill {
   color: #ffffff;
 }
 
+.btn-link {
+  color: var(--admin-primary-text);
+}
+
 .badge {
   border-radius: var(--radius-sm);
   font-weight: 700;
   letter-spacing: -0.005em;
   padding: 0.4em 0.7em;
-}
-
-/*
- * 단계 번호 원형 표식.
- * .badge 는 가로(0.7em)·세로(0.4em) 패딩이 달라 rounded-circle 을 줘도 타원이 된다.
- * 정원을 보장하려면 너비·높이를 같게 고정해야 한다.
- */
-.ui-step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 50%;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1;
-  background-color: var(--admin-border);
-  color: var(--admin-text);
-}
-
-/* 지금 할 수 있는 단계 */
-.ui-step--ready {
-  background-color: var(--admin-primary);
-  color: #ffffff;
 }
 
 .form-control,
@@ -538,7 +605,7 @@ select.ui-pill {
   box-shadow: var(--admin-ring);
 }
 
-/* -------------------------------------------------- 탭 · 알림 */
+/* -------------------------------------------------- 탭 · 알림 · 드롭다운 */
 
 .nav-tabs {
   border-bottom: 1px solid var(--admin-border);
@@ -561,7 +628,7 @@ select.ui-pill {
 
 .nav-tabs .nav-link.active {
   background-color: transparent;
-  color: var(--admin-primary);
+  color: var(--admin-primary-text);
   box-shadow: inset 0 -2px 0 var(--admin-primary);
 }
 
@@ -570,12 +637,8 @@ select.ui-pill {
   border-radius: var(--radius-md);
 }
 
-.alert-light {
-  background-color: var(--admin-surface);
-  border: 1px solid var(--admin-border);
-}
-
 .dropdown-menu {
+  --bs-dropdown-bg: var(--admin-surface);
   border: 1px solid var(--admin-border);
   border-radius: var(--radius-md);
   box-shadow: var(--admin-shadow);
@@ -590,57 +653,4 @@ select.ui-pill {
 
 .dropdown-item:hover {
   background-color: var(--admin-surface-soft);
-}
-
-/* -------------------------------------------------- 로그인 */
-
-.ui-auth {
-  min-height: 100vh;
-  background-color: var(--admin-sidebar);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-}
-
-.ui-auth .card {
-  border-radius: var(--radius-lg);
-  border: none;
-  box-shadow: var(--admin-shadow-lg);
-  width: 100%;
-  max-width: 420px;
-}
-
-/* -------------------------------------------------- 좁은 화면 */
-
-/* 최소 지원 폭은 1280px 이지만(specs/11 §9), 그 아래에서도 읽을 수는 있어야 한다. */
-@media (max-width: 991.98px) {
-  .ui-sidebar {
-    position: static;
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 1rem;
-  }
-
-  .ui-sidebar .ui-menu-title,
-  .ui-sidebar-footer {
-    display: none;
-  }
-
-  .ui-main {
-    margin-left: 0;
-  }
-
-  .ui-navbar {
-    height: auto;
-    flex-wrap: wrap;
-    padding: 1rem;
-  }
-
-  .ui-content {
-    padding: 1rem;
-  }
 }

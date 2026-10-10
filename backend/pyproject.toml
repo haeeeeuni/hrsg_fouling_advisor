@@ -9,7 +9,7 @@ extend-exclude = "/migrations/"
 profile = "black"
 line_length = 100
 skip_glob = ["*/migrations/*"]
-known_first_party = ["accounts", "analysis", "common", "config", "ingestion", "maintenance", "reports", "units"]
+known_first_party = ["accounts", "common", "config"]
 
 [tool.ruff]
 line-length = 100
@@ -21,5 +21,6 @@ select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["B008"]
 
 [tool.coverage.run]
-source = ["analysis/services"]
+# 순수 함수 서비스가 생기는 마일스톤마다 추가한다(AGENTS.md §8).
+source = ["accounts", "common"]
 omit = ["*/tests/*", "*/migrations/*"]

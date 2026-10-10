@@ -1,8 +1,8 @@
 /**
- * E2E 실행 환경 (specs/21 §3).
+ * E2E 실행 환경 (specs/14 §4.3).
  *
  * 값은 전부 환경 변수로 바꿀 수 있다. 기본값은 로컬 개발 스택(Vite 5173 + Django 8000)과
- * seed_defaults 가 만드는 초기 관리자 계정이다(specs/01 §4).
+ * seed_defaults 가 만드는 기본 관리자 계정이다(specs/01 AUTH-9).
  */
 import path from 'node:path';
 
@@ -14,20 +14,20 @@ export const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 export const IS_REMOTE = !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(BASE_URL);
 
 export const ADMIN = {
-  fullName: process.env.E2E_ADMIN_NAME ?? '관리자',
-  employeeNo: process.env.E2E_ADMIN_NO ?? 'ADM01',
-  password: process.env.E2E_ADMIN_PASSWORD ?? 'qwer',
+  username: process.env.E2E_ADMIN_USERNAME ?? 'admin',
+  password: process.env.E2E_ADMIN_PASSWORD ?? 'admin1234!',
 };
-
-/** 업로드 시나리오용 샘플 CSV 를 만들 Python. 백엔드 가상환경을 기본으로 쓴다. */
-export const PYTHON = process.env.E2E_PYTHON ?? path.join(ROOT, 'backend', '.venv', 'bin', 'python');
 
 export const PATHS = {
   root: ROOT,
-  backend: path.join(ROOT, 'backend'),
   adminState: path.join(ROOT, 'playwright', '.auth', 'admin.json'),
-  data: path.join(ROOT, 'playwright', '.data'),
 };
 
 /** 데이터를 바꾸는 테스트에 붙이는 태그. 원격 대상에서는 config 가 grepInvert 로 제외한다. */
 export const MUTATES = '@mutates';
+
+/** 뷰포트 (specs/12 §5). 데스크톱은 기본, 모바일은 레이아웃 검사에 쓴다. */
+export const VIEWPORTS = {
+  desktop: { width: 1280, height: 800 },
+  mobile: { width: 390, height: 844 },
+};

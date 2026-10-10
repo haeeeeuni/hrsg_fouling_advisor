@@ -1,6 +1,6 @@
-"""인증 관련 도메인 로직 (specs/01 §3).
+"""인증·가입 도메인 로직 (specs/01 §3~§6).
 
-로그인 잠금 규칙과 이력 기록을 뷰에서 분리한다.
+로그인 잠금 규칙, 이력 기록, 승인 처리를 뷰에서 분리한다.
 """
 
 from __future__ import annotations
@@ -12,15 +12,17 @@ from datetime import timedelta
 from django.http import HttpRequest
 from django.utils import timezone
 
-from accounts.models import LoginHistory, User
+from accounts.models import ApprovalStatus, LoginHistory, Role, User
 from common.constants import (
+    CREDENTIAL_FAILURES,
     FAIL_BAD_PASSWORD,
     FAIL_INACTIVE,
     FAIL_LOCKED,
-    FAIL_NAME_MISMATCH,
     FAIL_NOT_FOUND,
+    FAIL_PENDING,
+    FAIL_REJECTED,
 )
-from units.settings_resolver import get_setting
+from common.settings_resolver import get_setting
 
 logger = logging.getLogger(__name__)
 
@@ -38,28 +40,30 @@ def client_ip(request: HttpRequest) -> str | None:
     return request.META.get("REMOTE_ADDR") or None
 
 
-def check_lockout(employee_no: str) -> LockState:
+def check_lockout(username: str) -> LockState:
     """연속 실패 횟수가 임계치에 도달했고 잠금 시간이 지나지 않았으면 잠금 상태를 반환한다.
 
-    specs/01 §3.2 — 실패 5회 연속 시 5분간 해당 사번 로그인 차단(임계치는 설정값).
+    specs/01 AUTH-8 — ID·비밀번호가 틀린 시도만 센다. 승인 대기·반려·비활성은 비밀번호가
+    맞았다는 뜻이므로 세지 않고, 잠긴 상태에서의 시도(LOCKED)도 세지 않는다
+    (세면 잠긴 동안 재시도할 때마다 해제 시각이 계속 밀린다).
     """
     max_failures: int = get_setting("login_max_failures")
     lockout_minutes: int = get_setting("login_lockout_minutes")
 
-    # 잠금 상태에서의 시도(FAIL_LOCKED)는 연속 실패로 세지 않는다.
-    # 그렇지 않으면 잠긴 동안 재시도할 때마다 해제 시각이 계속 밀린다.
-    recent = list(
-        LoginHistory.objects.filter(attempted_employee_no=employee_no)
+    recent = (
+        LoginHistory.objects.filter(attempted_username=username)
         .exclude(fail_reason=FAIL_LOCKED)
         .order_by("-created_at")
-        .values_list("success", "created_at")[: max_failures + 1]
+        .values_list("success", "fail_reason", "created_at")
     )
 
     consecutive: list = []
-    for success, created_at in recent:
-        if success:
+    for success, fail_reason, created_at in recent[: max_failures * 3]:
+        if success or fail_reason not in CREDENTIAL_FAILURES:
             break
         consecutive.append(created_at)
+        if len(consecutive) >= max_failures:
+            break
 
     if len(consecutive) < max_failures:
         return LockState(locked=False)
@@ -76,16 +80,14 @@ def check_lockout(employee_no: str) -> LockState:
 def record_attempt(
     request: HttpRequest,
     *,
-    employee_no: str,
-    full_name_input: str,
+    username: str,
     success: bool,
     user: User | None = None,
     fail_reason: str = "",
 ) -> None:
     LoginHistory.objects.create(
         user=user,
-        attempted_employee_no=employee_no[:20],
-        full_name_input=full_name_input[:50],
+        attempted_username=username[:150],
         success=success,
         fail_reason=fail_reason,
         ip=client_ip(request),
@@ -93,27 +95,28 @@ def record_attempt(
     )
 
 
-def authenticate_user(
-    *, employee_no: str, full_name: str, password: str
-) -> tuple[User | None, str]:
-    """성명·사번·비밀번호 3요소를 검증한다.
+def authenticate_user(*, username: str, password: str) -> tuple[User | None, str]:
+    """ID·비밀번호를 검증하고, 맞으면 승인·활성 상태를 본다.
 
     Returns: (user, fail_reason). 성공 시 fail_reason 은 빈 문자열.
-    specs/01 §3.2 의 순서를 그대로 따른다.
+    상태 사유(PENDING/REJECTED/INACTIVE)일 때도 user 를 돌려준다 — 반려 사유를 알리기 위해서다.
+    상태 확인을 비밀번호 확인 **뒤에** 두는 것이 핵심이다(specs/01 AUTH-7, 계정 존재 노출 방지).
     """
-    user = User.objects.filter(employee_no=employee_no).first()
+    user = User.objects.filter(username=username).first()
     if user is None:
+        # 존재하지 않는 ID 도 해시 비교 시간만큼 걸리게 해 응답 시간으로 존재 여부가 새지 않게 한다.
+        User().set_password(password)
         return None, FAIL_NOT_FOUND
-
-    # 성명은 공백 제거 후 정확히 일치해야 한다.
-    if user.full_name.replace(" ", "") != full_name.replace(" ", ""):
-        return None, FAIL_NAME_MISMATCH
-
-    if not user.is_active:
-        return None, FAIL_INACTIVE
 
     if not user.check_password(password):
         return None, FAIL_BAD_PASSWORD
+
+    if user.approval_status == ApprovalStatus.PENDING:
+        return user, FAIL_PENDING
+    if user.approval_status == ApprovalStatus.REJECTED:
+        return user, FAIL_REJECTED
+    if not user.is_active:
+        return user, FAIL_INACTIVE
 
     return user, ""
 
@@ -121,3 +124,56 @@ def authenticate_user(
 def mark_logged_in(user: User) -> None:
     user.last_login_at = timezone.now()
     user.save(update_fields=["last_login_at", "updated_at"])
+
+
+def active_admins():
+    return User.objects.filter(
+        role=Role.ADMIN, approval_status=ApprovalStatus.APPROVED, is_active=True
+    )
+
+
+def is_last_active_admin(user: User) -> bool:
+    """이 사용자가 마지막 활성 관리자인지 (specs/01 AUTH-11)."""
+    if not (user.role == Role.ADMIN and user.is_approved and user.is_active):
+        return False
+    return not active_admins().exclude(pk=user.pk).exists()
+
+
+def approve(user: User, *, by: User) -> None:
+    user.approval_status = ApprovalStatus.APPROVED
+    user.approved_by = by
+    user.approved_at = timezone.now()
+    user.rejection_reason = ""
+    user.save(
+        update_fields=[
+            "approval_status",
+            "approved_by",
+            "approved_at",
+            "rejection_reason",
+            "updated_at",
+        ]
+    )
+
+
+def reject(user: User, *, by: User, reason: str) -> None:
+    user.approval_status = ApprovalStatus.REJECTED
+    user.approved_by = by
+    user.approved_at = timezone.now()
+    user.rejection_reason = reason
+    user.save(
+        update_fields=[
+            "approval_status",
+            "approved_by",
+            "approved_at",
+            "rejection_reason",
+            "updated_at",
+        ]
+    )
+
+
+def has_activity(user: User) -> bool:
+    """물리 삭제를 막아야 하는 활동 기록이 있는지 (specs/01 §7).
+
+    기준은 대화(N5)·데이터 요청 건(N3)이다. 해당 모델이 생기는 마일스톤에서 여기에 확인을 더한다.
+    """
+    return False

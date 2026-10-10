@@ -1,30 +1,25 @@
 """로그 마스킹 필터.
 
-specs/18 §2 — 비밀번호·사번 전체를 로그에 남기지 않는다(AC-18-3).
+specs/13 NFR-8 — 비밀번호·API 키를 로그에 남기지 않는다(AC-13-4).
+마스킹은 마지막 방어선이다. 애초에 본문·키를 로그 인자로 넘기지 않는 것이 원칙이다.
 """
 
 import logging
 import re
 
 # password=..., "password": "..." 등을 통째로 가린다.
-_PASSWORD_RE = re.compile(
-    r"(?i)(password|passwd|pwd|new_password|current_password)([\"']?\s*[:=]\s*[\"']?)([^\s,;}\"']+)"
+_SECRET_FIELD_RE = re.compile(
+    r"(?i)(password|passwd|pwd|new_password|current_password|api_key|secret)"
+    r"([\"']?\s*[:=]\s*[\"']?)([^\s,;}\"']+)"
 )
 
-# 사번 형태(영문 대문자+숫자 2~20자)는 앞 2자만 남기고 마스킹한다.
-_EMPLOYEE_NO_RE = re.compile(r"\b([A-Z]{1,4}\d{1,}|[A-Z]\d{3,})\b")
-
-
-def _mask_employee_no(match: re.Match[str]) -> str:
-    token = match.group(1)
-    if len(token) <= 2:
-        return "*" * len(token)
-    return f"{token[:2]}{'*' * (len(token) - 2)}"
+# LLM 공급자 키 형태(specs/04 LLM-2). OpenAI·Anthropic(sk-…), Google(AIza…).
+_API_KEY_RE = re.compile(r"\b(sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,})")
 
 
 def mask(text: str) -> str:
-    text = _PASSWORD_RE.sub(r"\1\2***", text)
-    return _EMPLOYEE_NO_RE.sub(_mask_employee_no, text)
+    text = _SECRET_FIELD_RE.sub(r"\1\2***", text)
+    return _API_KEY_RE.sub("***", text)
 
 
 class MaskSensitiveFilter(logging.Filter):

@@ -1,10 +1,10 @@
-"""비동기 작업 추상화 (specs/15 §1).
+"""비동기 작업 추상화 (specs/10 §1).
 
 뷰는 Celery를 직접 알지 못하고 이 모듈만 호출한다. 실행기를 바꾸더라도
 `202 + job_id` → `GET /api/jobs/{job_id}/` 계약은 그대로 유지된다.
 
-작업 상태는 Celery 결과 백엔드(Redis)에 둔다. 영속 기록은 UploadBatch / AnalysisRun
-같은 도메인 테이블이 담당하므로 별도 Job 테이블을 두지 않는다.
+작업 상태는 Celery 결과 백엔드(Redis)에 둔다. 영속 기록은 KnowledgeDocument.index_status
+같은 도메인 필드가 담당하므로 별도 Job 테이블을 두지 않는다.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import Any
 from celery import current_app
 from celery.result import AsyncResult
 
-# 공통 상태값 (specs/15 §1)
+# 공통 상태값
 RUNNING = "RUNNING"
 SUCCESS = "SUCCESS"
 FAILED = "FAILED"

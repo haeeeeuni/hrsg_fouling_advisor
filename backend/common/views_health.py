@@ -1,4 +1,4 @@
-"""헬스체크 (specs/18 §3, §7).
+"""헬스체크 (specs/13 §6).
 
 컨테이너·로드밸런서가 기동 여부를 판단하는 용도라 **인증 없이** 열어 둔다.
 그 대신 내부 구성이 드러나지 않도록 버전·경로·예외 메시지를 담지 않는다.
@@ -34,7 +34,7 @@ class ReadinessView(APIView):
     authentication_classes: list = []
 
     def get(self, request: Request) -> Response:
-        checks = {"database": _check_database()}
+        checks = {"database": _check_database(), "vector": _check_vector_extension()}
         healthy = all(checks.values())
         return Response(
             {"status": "ok" if healthy else "unavailable", "checks": checks},
@@ -50,4 +50,14 @@ def _check_database() -> bool:
             cursor.execute("SELECT 1")
             return cursor.fetchone() == (1,)
     except Exception:  # noqa: BLE001 - 원인은 로그로 남기고 응답에는 노출하지 않는다.
+        return False
+
+
+def _check_vector_extension() -> bool:
+    """지식 베이스 검색에 필요한 pgvector 확장이 설치돼 있는가 (specs/13 AC-13-5)."""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+            return cursor.fetchone() == (1,)
+    except Exception:  # noqa: BLE001
         return False

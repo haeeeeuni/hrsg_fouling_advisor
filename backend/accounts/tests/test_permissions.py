@@ -1,90 +1,87 @@
-"""권한 테스트 (AC-01-5, AC-15-2).
+"""권한 전수 검사 (specs/10 AC-10-1·2, specs/08 AC-08-1).
 
-관리자 전용 API는 Phase 6에서 추가되므로, 여기서는 IsAdminRole 권한 클래스 자체를
-임시 뷰에 붙여 검증한다. 실제 /api/settings/ 에 대한 403 검증은 Phase 6에서 추가한다.
+새 엔드포인트를 만들면 아래 목록에 추가한다. 빠뜨리면 권한 구멍이 테스트에 걸리지 않는다.
 """
 
 import pytest
-from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory, force_authenticate
-from rest_framework.views import APIView
-
-from accounts.permissions import IsAdminRole
 
 pytestmark = pytest.mark.django_db
 
+# (메서드, 경로) — 승인된 사용자 이상만
+USER_ENDPOINTS = [
+    ("patch", "/api/auth/me/"),
+    ("post", "/api/auth/password/"),
+    ("get", "/api/jobs/some-job-id/"),
+]
 
-class _AdminOnlyView(APIView):
-    """관리자 전용 엔드포인트를 흉내 낸 임시 뷰."""
+# (메서드, 경로) — 관리자만. {pk} 는 존재하는 사용자로 바뀐다.
+ADMIN_ENDPOINTS = [
+    ("get", "/api/admin/overview/"),
+    ("get", "/api/admin/users/"),
+    ("get", "/api/admin/users/{pk}/"),
+    ("patch", "/api/admin/users/{pk}/"),
+    ("delete", "/api/admin/users/{pk}/"),
+    ("post", "/api/admin/users/{pk}/approve/"),
+    ("post", "/api/admin/users/{pk}/reject/"),
+    ("post", "/api/admin/users/{pk}/reset-password/"),
+    ("get", "/api/admin/login-histories/"),
+    ("get", "/api/admin/audit-logs/"),
+    ("get", "/api/admin/settings/"),
+    ("patch", "/api/admin/settings/"),
+    ("post", "/api/admin/settings/login_max_failures/reset/"),
+]
 
-    permission_classes = [IsAdminRole]
-
-    def get(self, request):
-        return Response({"ok": True})
-
-
-@pytest.fixture
-def view():
-    return _AdminOnlyView.as_view()
-
-
-@pytest.fixture
-def factory():
-    return APIRequestFactory()
-
-
-def test_ac_15_1_anonymous_gets_401(view, factory):
-    res = view(factory.get("/dummy/"))
-    res.render()
-
-    assert res.status_code == 401
-    assert res.data["error"]["code"] == "NOT_AUTHENTICATED"
-
-
-def test_ac_01_5_normal_user_gets_403(view, factory, normal_user):
-    request = factory.get("/dummy/")
-    force_authenticate(request, user=normal_user)
-
-    res = view(request)
-    res.render()
-
-    assert res.status_code == 403
-    assert res.data["error"]["code"] == "PERMISSION_DENIED"
+PUBLIC_ENDPOINTS = [
+    ("get", "/api/auth/csrf/"),
+    ("get", "/api/auth/me/"),
+    ("get", "/api/auth/username-available/?username=abcd"),
+    ("get", "/api/health/live/"),
+    ("get", "/api/health/ready/"),
+]
 
 
-def test_admin_role_is_allowed(view, factory, admin_user):
-    request = factory.get("/dummy/")
-    force_authenticate(request, user=admin_user)
-
-    res = view(request)
-    res.render()
-
-    assert res.status_code == 200
+def call(api, method, path, user):
+    return getattr(api, method)(path.format(pk=user.pk), {}, format="json")
 
 
-def test_is_staff_alone_does_not_grant_app_permission(view, factory, normal_user):
-    """specs/01 §2 — 앱 권한은 role 로만 판정한다. is_staff/is_superuser 는 /admin/ 전용."""
-    normal_user.is_staff = True
-    normal_user.is_superuser = True
-    normal_user.save(update_fields=["is_staff", "is_superuser"])
-
-    request = factory.get("/dummy/")
-    force_authenticate(request, user=normal_user)
-
-    res = view(request)
-    res.render()
-
-    assert res.status_code == 403
+@pytest.mark.parametrize(("method", "path"), USER_ENDPOINTS + ADMIN_ENDPOINTS)
+def test_anonymous_gets_401(api, normal_user, method, path):
+    assert call(api, method, path, normal_user).status_code == 401
 
 
-def test_inactive_admin_is_rejected(view, factory, admin_user):
-    admin_user.is_active = False
-    admin_user.save(update_fields=["is_active"])
+@pytest.mark.parametrize(("method", "path"), USER_ENDPOINTS + ADMIN_ENDPOINTS)
+def test_pending_user_is_refused(api, pending_user, method, path):
+    """AC-01-8 · AC-10-2 — 승인 대기 세션은 어떤 업무 API 도 못 쓴다."""
+    api.force_authenticate(pending_user)
 
-    request = factory.get("/dummy/")
-    force_authenticate(request, user=admin_user)
+    assert call(api, method, path, pending_user).status_code == 403
 
-    res = view(request)
-    res.render()
 
-    assert res.status_code in (401, 403)
+@pytest.mark.parametrize(("method", "path"), ADMIN_ENDPOINTS)
+def test_normal_user_gets_403_on_admin_api(api, normal_user, method, path):
+    api.force_authenticate(normal_user)
+
+    assert call(api, method, path, normal_user).status_code == 403
+
+
+@pytest.mark.parametrize(("method", "path"), ADMIN_ENDPOINTS)
+def test_pending_admin_role_is_refused(api, pending_user, method, path):
+    """역할이 ADMIN 이어도 승인되지 않았으면 관리자 API 를 못 쓴다."""
+    pending_user.role = "ADMIN"
+    pending_user.save()
+    api.force_authenticate(pending_user)
+
+    assert call(api, method, path, pending_user).status_code == 403
+
+
+@pytest.mark.parametrize(("method", "path"), PUBLIC_ENDPOINTS)
+def test_public_endpoints_are_open(api, method, path):
+    assert getattr(api, method)(path).status_code == 200
+
+
+def test_error_format_is_uniform(api):
+    """AC-10-5"""
+    body = api.get("/api/admin/users/").data
+
+    assert set(body) == {"error"}
+    assert {"code", "message"} <= set(body["error"])

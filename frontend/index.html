@@ -1,9 +1,27 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-bs-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HRSG 오염도 진단</title>
+    <title>HRSG 레퍼런스 앱</title>
+    <script>
+      // 첫 렌더 전에 테마를 적용해 라이트→다크 깜빡임을 막는다 (specs/12 §2.1).
+      // 키 이름은 src/stores/ui.js 의 THEME_STORAGE_KEY 와 같아야 한다.
+      ;(function () {
+        var theme = null
+        try {
+          theme = window.localStorage.getItem('hrsg.theme')
+        } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          try {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          } catch (e) {
+            theme = 'light'
+          }
+        }
+        document.documentElement.setAttribute('data-bs-theme', theme)
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

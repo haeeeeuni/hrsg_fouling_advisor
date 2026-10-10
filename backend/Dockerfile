@@ -1,11 +1,11 @@
-# HRSG Fouling Advisor — 백엔드 (Django + Gunicorn / Celery)
+# HRSG 레퍼런스 앱 — 백엔드 (Django + Gunicorn / Celery)
 FROM python:3.13-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
-# psycopg(바이너리) 와 WeasyPrint/ReportLab 이 쓰는 런타임 라이브러리.
+# psycopg(바이너리) 가 쓰는 런타임 라이브러리.
 # 빌드 도구는 남기지 않는다(이미지 크기·공격면).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libpq5 \
@@ -19,12 +19,6 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
-
-# 한글 리포트용 동봉 폰트가 이미지에 들어갔는지 확인한다.
-# 빠지면 PDF 의 한글이 전부 네모로 나가는데 런타임에야 발견된다.
-RUN test -f reports/fonts/NanumGothic-Regular.ttf \
-    && test -f reports/fonts/NanumGothic-Bold.ttf \
-    || (echo "나눔고딕 폰트 누락 — PDF 한글이 네모로 나갑니다" && exit 1)
 
 # root 로 돌리지 않는다.
 RUN useradd --create-home --uid 10001 hrsg \

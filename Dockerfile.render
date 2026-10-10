@@ -2,7 +2,7 @@
 #
 # 사내 운영은 docker-compose.prod.yml 을 쓴다 (Nginx 가 SPA·정적 파일 서빙).
 # PaaS 는 컨테이너 하나만 띄우므로 SPA 를 이미지에 담아 Django(WhiteNoise)가 서빙한다.
-# PROJECT.md §1.5 는 외부 공개 서비스를 범위 밖으로 두므로 이 이미지는 시연 전용이다.
+# 이 이미지는 시연 전용이다(가상 데이터만 쓴다).
 
 # --- 1단계: SPA 빌드 ---
 FROM node:22-slim AS spa
@@ -32,10 +32,6 @@ RUN pip install -r requirements.txt
 
 COPY backend/ .
 COPY --from=spa /app/dist ./spa
-
-RUN test -f reports/fonts/NanumGothic-Regular.ttf \
-    && test -f reports/fonts/NanumGothic-Bold.ttf \
-    || (echo "나눔고딕 폰트 누락 — PDF 한글이 네모로 나갑니다" && exit 1)
 
 RUN useradd --create-home --uid 10001 hrsg \
     && mkdir -p /app/var /app/staticfiles \

@@ -1,4 +1,4 @@
-"""DRF 예외 → 공통 에러 JSON 변환 (specs/15 §1).
+"""DRF 예외 → 공통 에러 JSON 변환 (specs/10 §1).
 
 모든 에러 응답은 {"error": {"code", "message", "details"}} 형태를 따른다.
 """
@@ -90,7 +90,7 @@ def domain_exception_handler(exc: Exception, context: dict[str, Any]) -> Respons
 
     # DRF 는 SessionAuthentication 만 쓸 때 NotAuthenticated 를 403 으로 강등한다
     # (authenticate_header() 가 None 이라 WWW-Authenticate 를 못 만들기 때문).
-    # specs/15 AC-15-1 은 비인증 요청에 401 을 요구하므로 되돌린다.
+    # specs/10 AC-10-1 은 비인증 요청에 401 을 요구하므로 되돌린다.
     # 인증은 됐지만 권한이 없는 경우는 PermissionDenied 라서 403 으로 남는다.
     if isinstance(exc, (drf_exc.NotAuthenticated, drf_exc.AuthenticationFailed)):
         response.status_code = status.HTTP_401_UNAUTHORIZED

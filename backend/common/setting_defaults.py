@@ -1,0 +1,106 @@
+"""설정값 시드 정의 (specs/08 §4).
+
+여기에 있는 값은 **초기 시드값(default)** 일 뿐이다(AGENTS.md §1.2).
+실제 적용값은 DB(Setting)에서 읽으며, 관리자 화면에서 변경할 수 있다.
+
+조회 우선순위: Setting(DB) → 여기의 default
+
+마일스톤마다 새 설정이 생기면 이 파일에 정의를 추가하고 `seed_defaults` 를 다시 실행한다.
+specs/08 §4 의 설정 키 표도 같은 변경에서 갱신한다.
+"""
+
+import json
+from dataclasses import dataclass
+from typing import Any
+
+# 값 타입
+TYPE_INT = "INT"
+TYPE_FLOAT = "FLOAT"
+TYPE_BOOL = "BOOL"
+TYPE_STRING = "STRING"
+TYPE_TEXT = "TEXT"  # 여러 줄 문자열 (시스템 프롬프트 등)
+TYPE_JSON = "JSON"
+
+# 분류 (specs/08 §4)
+CAT_AUTH = "AUTH"
+CAT_CHAT = "CHAT"
+CAT_RAG = "RAG"
+CAT_CHUNK = "CHUNK"
+CAT_DOCUMENT = "DOCUMENT"
+CAT_LLM = "LLM"
+CAT_CALC = "CALC"
+CAT_CHECKLIST = "CHECKLIST"
+
+CATEGORY_LABELS: dict[str, str] = {
+    CAT_AUTH: "인증",
+    CAT_CHAT: "질의응답",
+    CAT_RAG: "검색(RAG)",
+    CAT_CHUNK: "청크",
+    CAT_DOCUMENT: "문서",
+    CAT_LLM: "LLM",
+    CAT_CALC: "계산기",
+    CAT_CHECKLIST: "체크리스트",
+}
+
+
+@dataclass(frozen=True)
+class SettingDef:
+    key: str
+    default: Any
+    value_type: str
+    category: str
+    label: str
+    description: str = ""
+    unit_label: str = ""
+    min_value: float | None = None
+    max_value: float | None = None
+
+
+SETTING_DEFS: tuple[SettingDef, ...] = (
+    # --- N1: 인증 (specs/01 AUTH-8) ---
+    SettingDef(
+        key="login_max_failures",
+        default=5,
+        value_type=TYPE_INT,
+        category=CAT_AUTH,
+        label="로그인 연속 실패 허용 횟수",
+        description="이 횟수만큼 연속으로 틀리면 해당 ID 로그인을 잠근다.",
+        unit_label="회",
+        min_value=3,
+        max_value=20,
+    ),
+    SettingDef(
+        key="login_lockout_minutes",
+        default=5,
+        value_type=TYPE_INT,
+        category=CAT_AUTH,
+        label="로그인 잠금 시간",
+        unit_label="분",
+        min_value=1,
+        max_value=1440,
+    ),
+)
+
+SETTING_DEF_BY_KEY: dict[str, SettingDef] = {d.key: d for d in SETTING_DEFS}
+
+
+def cast_value(raw: str, value_type: str) -> Any:
+    """Setting.value(문자열)를 value_type 에 맞게 변환한다."""
+    if value_type == TYPE_INT:
+        return int(float(raw))
+    if value_type == TYPE_FLOAT:
+        return float(raw)
+    if value_type == TYPE_BOOL:
+        return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+    if value_type == TYPE_JSON:
+        return json.loads(raw)
+    return raw
+
+
+def serialize_value(value: Any, value_type: str) -> str:
+    """파이썬 값을 Setting.value(문자열)로 직렬화한다."""
+    if value_type == TYPE_JSON:
+        return json.dumps(value, ensure_ascii=False)
+    if value_type == TYPE_BOOL:
+        return "true" if value else "false"
+    return str(value)

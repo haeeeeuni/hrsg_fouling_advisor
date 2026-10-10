@@ -1,4 +1,4 @@
-/** 로그인 상태 스토어 (specs/16 §5). */
+/** 로그인 상태 스토어 (specs/11 §5). */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -16,8 +16,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchMe() {
     try {
       const { data } = await authApi.fetchMe()
-      user.value = data
+      user.value = data.authenticated ? data.user : null
     } catch {
+      // 서버에 닿지 않아도 앱은 떠야 한다 — 비로그인으로 시작한다(specs/13 NFR-4).
       user.value = null
     } finally {
       initialized.value = true
@@ -29,8 +30,14 @@ export const useAuthStore = defineStore('auth', () => {
     // CSRF 쿠키를 먼저 받아야 POST 가 통과한다.
     await authApi.fetchCsrf()
     const { data } = await authApi.login(credentials)
-    user.value = data
+    user.value = data.user
     initialized.value = true
+    return data.user
+  }
+
+  async function signup(payload) {
+    await authApi.fetchCsrf()
+    const { data } = await authApi.signup(payload)
     return data
   }
 
@@ -40,6 +47,12 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       user.value = null
     }
+  }
+
+  async function updateProfile(payload) {
+    const { data } = await authApi.updateMe(payload)
+    user.value = data.user
+    return data.user
   }
 
   async function changePassword(payload) {
@@ -60,7 +73,9 @@ export const useAuthStore = defineStore('auth', () => {
     mustChangePassword,
     fetchMe,
     login,
+    signup,
     logout,
+    updateProfile,
     changePassword,
     clear,
   }

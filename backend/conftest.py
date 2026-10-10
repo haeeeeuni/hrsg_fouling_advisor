@@ -4,7 +4,7 @@ import pytest
 from django.test import override_settings
 from rest_framework.test import APIClient
 
-from accounts.models import Role, User
+from accounts.models import ApprovalStatus, Role, User
 
 
 @pytest.fixture
@@ -15,26 +15,39 @@ def api() -> APIClient:
 
 @pytest.fixture
 def user_password() -> str:
-    return "pw1234"
+    return "pass-word-1"
 
 
 @pytest.fixture
 def normal_user(db, user_password: str) -> User:
     return User.objects.create_user(
-        employee_no="A1234",
+        username="hong",
         full_name="홍길동",
+        organization="발전운영팀",
         password=user_password,
-        department="발전운영팀",
+        approval_status=ApprovalStatus.APPROVED,
+    )
+
+
+@pytest.fixture
+def pending_user(db, user_password: str) -> User:
+    return User.objects.create_user(
+        username="newbie",
+        full_name="신입",
+        organization="협력사",
+        password=user_password,
     )
 
 
 @pytest.fixture
 def admin_user(db, user_password: str) -> User:
     return User.objects.create_user(
-        employee_no="B5678",
+        username="kimadmin",
         full_name="김관리",
+        organization="기술지원팀",
         password=user_password,
         role=Role.ADMIN,
+        approval_status=ApprovalStatus.APPROVED,
     )
 
 
@@ -50,9 +63,9 @@ def seeded(db):
 def clear_throttle_cache():
     """테스트마다 스로틀 카운터를 비운다.
 
-    로그인 스로틀은 IP 기준 분당 10회다(specs/15 §13). 테스트는 모두 같은 IP 라
-    비우지 않으면 앞선 테스트가 쓴 횟수가 누적돼 뒤 테스트가 429 를 받는다.
-    스로틀 자체를 끄면 AC-15 의 한도 검증이 사라지므로 카운터만 초기화한다.
+    로그인 스로틀은 IP 기준 분당 10회다. 테스트는 모두 같은 IP 라 비우지 않으면
+    앞선 테스트가 쓴 횟수가 누적돼 뒤 테스트가 429 를 받는다.
+    스로틀 자체를 끄면 한도 검증이 사라지므로 카운터만 초기화한다.
     """
     from django.core.cache import cache
 

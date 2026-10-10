@@ -5,7 +5,7 @@
  * 없이 실행하면 값이 `undefined` 인 채로 jsdom 의 구현을 가린다.
  * (`ExperimentalWarning: localStorage is not available because --localstorage-file was not provided`)
  *
- * 호기 선택 보존(AC-16-3)처럼 localStorage 를 쓰는 동작을 검증해야 하므로,
+ * 테마 저장(specs/12 UI-5)처럼 localStorage 를 쓰는 동작을 검증해야 하므로,
  * 비어 있을 때만 최소 구현을 채워 넣는다. 정상 동작하는 런타임에서는 아무것도 하지 않는다.
  */
 function createStorage() {
@@ -33,4 +33,9 @@ for (const name of ['localStorage', 'sessionStorage']) {
       writable: true,
     })
   }
+}
+
+// jsdom 은 window.scrollTo 를 구현하지 않는다. 라우터의 scrollBehavior 가 부르면 경고만 찍히므로 비워 둔다.
+if (globalThis.window) {
+  window.scrollTo = () => {}
 }

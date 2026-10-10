@@ -6,26 +6,11 @@ import {
   formatCurrency,
   formatDate,
   formatDateTime,
-  formatDday,
-  formatDp,
-  formatFi,
+  formatKpa,
   formatPercent,
   formatPower,
   formatTemp,
 } from '@/utils/format'
-
-describe('formatFi', () => {
-  it('소수 1자리로 표기한다', () => {
-    expect(formatFi(62.44)).toBe('62.4')
-    expect(formatFi(0)).toBe('0.0')
-  })
-
-  it('값이 없으면 하이픈, 0 과 구분한다', () => {
-    expect(formatFi(null)).toBe(EMPTY)
-    expect(formatFi(undefined)).toBe(EMPTY)
-    expect(formatFi(0)).not.toBe(EMPTY)
-  })
-})
 
 describe('formatCurrency', () => {
   it('천단위 구분과 억을 함께 표기한다', () => {
@@ -46,8 +31,8 @@ describe('formatCurrency', () => {
 })
 
 describe('단위 포맷터', () => {
-  it('차압은 소수 2자리 + kPa', () => {
-    expect(formatDp(3.8249)).toBe('3.82 kPa')
+  it('압력은 소수 2자리 + kPa', () => {
+    expect(formatKpa(3.8249)).toBe('3.82 kPa')
   })
 
   it('온도는 소수 1자리 + ℃', () => {
@@ -79,34 +64,5 @@ describe('날짜 포맷터', () => {
   it('잘못된 값은 하이픈', () => {
     expect(formatDate('not-a-date')).toBe(EMPTY)
     expect(formatDateTime(null)).toBe(EMPTY)
-  })
-})
-
-describe('formatDday', () => {
-  it('정상 추세는 D-N', () => {
-    expect(formatDday(84, 'OK')).toBe('D-84')
-  })
-
-  it('이미 도달한 경우', () => {
-    expect(formatDday(0, 'ALREADY_EXCEEDED')).toBe('이미 도달')
-    expect(formatDday(0, 'OK')).toBe('이미 도달')
-  })
-
-  it('추세를 확인할 수 없으면 예측 불가', () => {
-    expect(formatDday(null, 'NO_TREND')).toBe('예측 불가')
-    expect(formatDday(null, 'INSUFFICIENT_DATA')).toBe('예측 불가')
-  })
-
-  it('예측 지평을 넘으면 별도 문구', () => {
-    expect(formatDday(900, 'BEYOND_HORIZON')).toBe('2년 내 도달 예상 없음')
-  })
-
-  it('값이 없으면 하이픈', () => {
-    expect(formatDday(null, undefined)).toBe(EMPTY)
-  })
-
-  it('상태 없이 일수만 줘도 동작한다', () => {
-    expect(formatDday(84)).toBe('D-84')
-    expect(formatDday(84.4)).toBe('D-84')
   })
 })

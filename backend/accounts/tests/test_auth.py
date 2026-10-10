@@ -1,237 +1,280 @@
-"""인증 API 테스트 (specs/01 §9, specs/15 §14)."""
-
-from datetime import timedelta
+"""회원가입·로그인·내 정보 (specs/01 AC-01-1·2·3·6·8·9)."""
 
 import pytest
-from django.urls import reverse
-from django.utils import timezone
 
-from accounts.models import LoginHistory, Role, User
+from accounts.models import ApprovalStatus, LoginHistory, User
+from common.constants import FAIL_BAD_PASSWORD, FAIL_PENDING
 
 pytestmark = pytest.mark.django_db
 
-LOGIN_URL = "/api/auth/login/"
-ME_URL = "/api/auth/me/"
-LOGOUT_URL = "/api/auth/logout/"
-CHANGE_PW_URL = "/api/auth/change-password/"
+SIGNUP = "/api/auth/signup/"
+LOGIN = "/api/auth/login/"
+LOGOUT = "/api/auth/logout/"
+ME = "/api/auth/me/"
+PASSWORD = "/api/auth/password/"
+AVAILABLE = "/api/auth/username-available/"
 
 
-def login(api, employee_no="A1234", full_name="홍길동", password="pw1234"):
-    return api.post(
-        LOGIN_URL,
-        {"employee_no": employee_no, "full_name": full_name, "password": password},
-        format="json",
+def signup_payload(**overrides):
+    payload = {
+        "username": "Park.Eng",
+        "password": "good-pass-9",
+        "password_confirm": "good-pass-9",
+        "full_name": " 박엔지 ",
+        "organization": "협력사 A",
+        "signup_reason": "세정 검토",
+    }
+    payload.update(overrides)
+    return payload
+
+
+# --- 회원가입 ---
+
+
+def test_signup_creates_pending_user_without_logging_in(api):
+    res = api.post(SIGNUP, signup_payload(), format="json")
+
+    assert res.status_code == 201
+    assert res.data["approval_status"] == ApprovalStatus.PENDING
+    user = User.objects.get(username="park.eng")  # 소문자로 저장
+    assert user.full_name == "박엔지"
+    assert user.approval_status == ApprovalStatus.PENDING
+    assert user.role == "USER"
+    # 자동 로그인하지 않는다(AUTH-2).
+    assert api.get(ME).data["authenticated"] is False
+
+
+def test_signup_rejects_case_only_duplicate(api, normal_user):
+    """AC-01-6 — 대소문자만 다른 ID 로 가입할 수 없다."""
+    res = api.post(SIGNUP, signup_payload(username="HONG"), format="json")
+
+    assert res.status_code == 400
+    assert "이미 사용 중인 ID" in res.data["error"]["details"]["username"][0]
+
+
+@pytest.mark.parametrize("username", ["abc", "has space", "한글아이디", "a" * 31, "bad!char"])
+def test_signup_rejects_invalid_username(api, username):
+    res = api.post(SIGNUP, signup_payload(username=username), format="json")
+
+    assert res.status_code == 400
+    assert "username" in res.data["error"]["details"]
+
+
+@pytest.mark.parametrize(
+    ("password", "reason"),
+    [("short1", "8자 미만"), ("1234567890", "숫자만")],
+)
+def test_signup_enforces_password_policy(api, password, reason):
+    res = api.post(
+        SIGNUP, signup_payload(password=password, password_confirm=password), format="json"
     )
 
+    assert res.status_code == 400, reason
+    assert "password" in res.data["error"]["details"]
 
-# --- AC-01-1 / AC-01-2 는 test_seed.py 참조 ---
+
+def test_signup_requires_matching_confirmation(api):
+    res = api.post(SIGNUP, signup_payload(password_confirm="other-pass-9"), format="json")
+
+    assert res.status_code == 400
+    assert "password_confirm" in res.data["error"]["details"]
 
 
-def test_login_success_returns_profile(api, normal_user, user_password):
-    res = login(api, password=user_password)
+def test_rejected_username_cannot_sign_up_again(api, pending_user, admin_user):
+    pending_user.approval_status = ApprovalStatus.REJECTED
+    pending_user.save()
+
+    res = api.post(SIGNUP, signup_payload(username="newbie"), format="json")
+
+    assert res.status_code == 400
+
+
+def test_username_available(api, normal_user):
+    assert api.get(AVAILABLE, {"username": "free.id"}).data["available"] is True
+    taken = api.get(AVAILABLE, {"username": "Hong"}).data
+    assert taken["available"] is False
+    assert "이미 사용 중" in taken["reason"]
+    assert api.get(AVAILABLE, {"username": "ab"}).data["available"] is False
+
+
+# --- 로그인 ---
+
+
+def test_login_succeeds_case_insensitively(api, normal_user, user_password):
+    res = api.post(LOGIN, {"username": " HONG ", "password": user_password}, format="json")
 
     assert res.status_code == 200
-    assert res.data["employee_no"] == "A1234"
-    assert res.data["full_name"] == "홍길동"
-    assert res.data["role"] == Role.USER
-    assert res.data["is_admin"] is False
-
+    assert res.data["user"]["username"] == "hong"
+    assert api.get(ME).data["authenticated"] is True
     normal_user.refresh_from_db()
     assert normal_user.last_login_at is not None
-    assert LoginHistory.objects.filter(user=normal_user, success=True).count() == 1
 
 
-def test_ac_01_3_wrong_full_name_fails_even_with_correct_credentials(
-    api, normal_user, user_password
-):
-    """AC-01-3: 성명이 틀리면 사번·비밀번호가 맞아도 로그인에 실패한다."""
-    res = login(api, full_name="임꺽정", password=user_password)
+def test_pending_user_with_correct_password_sees_pending_notice(api, pending_user, user_password):
+    """AC-01-1"""
+    res = api.post(LOGIN, {"username": "newbie", "password": user_password}, format="json")
+
+    assert res.status_code == 403
+    assert res.data["error"]["code"] == "ACCOUNT_PENDING"
+    assert api.get(ME).data["authenticated"] is False
+
+
+def test_pending_user_with_wrong_password_sees_generic_message(api, pending_user):
+    """AC-01-2 — 비밀번호가 틀리면 상태를 알려 주지 않는다."""
+    res = api.post(LOGIN, {"username": "newbie", "password": "wrong-pass-1"}, format="json")
 
     assert res.status_code == 400
     assert res.data["error"]["code"] == "LOGIN_FAILED"
-    # 계정 존재 여부가 드러나지 않는 통일 메시지여야 한다.
-    assert res.data["error"]["message"] == "성명, 사번 또는 비밀번호가 올바르지 않습니다."
+    assert res.data["error"]["message"] == "ID 또는 비밀번호가 올바르지 않습니다."
 
 
-def test_full_name_compared_ignoring_spaces(api, normal_user, user_password):
-    res = login(api, full_name=" 홍 길 동 ", password=user_password)
-    assert res.status_code == 200
+def test_unknown_user_gets_same_message_as_wrong_password(api, normal_user):
+    unknown = api.post(LOGIN, {"username": "nobody", "password": "x-password-1"}, format="json")
+    wrong = api.post(LOGIN, {"username": "hong", "password": "x-password-1"}, format="json")
+
+    assert unknown.status_code == wrong.status_code == 400
+    assert unknown.data == wrong.data
 
 
-def test_unknown_employee_no_uses_same_message(api, db):
-    res = login(api, employee_no="ZZ999", full_name="없는사람", password="whatever")
+def test_rejected_user_sees_reason(api, pending_user, user_password):
+    """AC-01-3 — 반려 사유가 로그인 시 보인다."""
+    pending_user.approval_status = ApprovalStatus.REJECTED
+    pending_user.rejection_reason = "소속 확인 불가"
+    pending_user.save()
 
-    assert res.status_code == 400
-    assert res.data["error"]["message"] == "성명, 사번 또는 비밀번호가 올바르지 않습니다."
+    res = api.post(LOGIN, {"username": "newbie", "password": user_password}, format="json")
+
+    assert res.status_code == 403
+    assert res.data["error"]["code"] == "ACCOUNT_REJECTED"
+    assert "소속 확인 불가" in res.data["error"]["message"]
 
 
-def test_inactive_account_gets_distinct_message(api, normal_user, user_password):
+def test_inactive_user_cannot_log_in(api, normal_user, user_password):
     normal_user.is_active = False
-    normal_user.save(update_fields=["is_active"])
+    normal_user.save()
 
-    res = login(api, password=user_password)
+    res = api.post(LOGIN, {"username": "hong", "password": user_password}, format="json")
 
-    assert res.status_code == 400
+    assert res.status_code == 403
     assert res.data["error"]["code"] == "ACCOUNT_INACTIVE"
-    assert "비활성화된 계정" in res.data["error"]["message"]
 
 
-def test_lockout_after_consecutive_failures(api, normal_user, seeded):
-    """specs/01 §3.2 — 연속 실패가 임계치에 도달하면 해당 사번을 일시 차단한다."""
+def test_login_attempts_are_recorded(api, pending_user, user_password):
+    api.post(LOGIN, {"username": "newbie", "password": "wrong-pass-1"}, format="json")
+    api.post(LOGIN, {"username": "newbie", "password": user_password}, format="json")
+
+    reasons = list(
+        LoginHistory.objects.order_by("created_at").values_list("fail_reason", flat=True)
+    )
+    assert reasons == [FAIL_BAD_PASSWORD, FAIL_PENDING]
+
+
+def test_lockout_after_consecutive_failures(api, normal_user, user_password, seeded):
+    """AC-01-9 — 5회 연속 실패 후 올바른 비밀번호도 막힌다."""
     for _ in range(5):
-        assert login(api, password="wrong").status_code == 400
+        api.post(LOGIN, {"username": "hong", "password": "wrong-pass-1"}, format="json")
 
-    res = login(api, password="pw1234")  # 올바른 비밀번호여도 잠금이 우선한다.
+    res = api.post(LOGIN, {"username": "hong", "password": user_password}, format="json")
 
     assert res.status_code == 429
     assert res.data["error"]["code"] == "LOGIN_LOCKED"
     assert res.data["error"]["details"]["retry_after_sec"] > 0
 
 
-def test_lockout_expires_after_window(api, normal_user, seeded, user_password):
-    for _ in range(5):
-        login(api, password="wrong")
+def test_status_failures_do_not_count_toward_lockout(api, pending_user, user_password, seeded):
+    """승인 대기 계정이 맞는 비밀번호로 여러 번 시도해도 잠기지 않는다."""
+    for _ in range(6):
+        res = api.post(LOGIN, {"username": "newbie", "password": user_password}, format="json")
 
-    # 실패 이력을 잠금 시간(5분) 이전으로 되돌린다.
-    LoginHistory.objects.all().update(created_at=timezone.now() - timedelta(minutes=6))
-
-    assert login(api, password=user_password).status_code == 200
+    assert res.data["error"]["code"] == "ACCOUNT_PENDING"
 
 
-def test_successful_login_resets_failure_streak(api, normal_user, seeded, user_password):
-    for _ in range(4):
-        login(api, password="wrong")
-    assert login(api, password=user_password).status_code == 200
+def test_login_throttle_by_ip(api, normal_user):
+    codes = [
+        api.post(
+            LOGIN, {"username": f"x{i}user", "password": "p-assword1"}, format="json"
+        ).status_code
+        for i in range(11)
+    ]
 
-    api.post(LOGOUT_URL)
-    for _ in range(4):
-        login(api, password="wrong")
-
-    # 성공 이후로 다시 4회이므로 아직 잠기지 않아야 한다.
-    assert login(api, password=user_password).status_code == 200
+    assert codes[-1] == 429
 
 
-# --- AC-15-1: 비인증 401 ---
+# --- 세션·내 정보 ---
 
 
-@pytest.mark.parametrize("url", [ME_URL, LOGOUT_URL, CHANGE_PW_URL])
-def test_ac_15_1_unauthenticated_requests_get_401(api, db, url):
-    res = api.get(url) if url == ME_URL else api.post(url, {}, format="json")
-
-    assert res.status_code == 401
-    assert res.data["error"]["code"] == "NOT_AUTHENTICATED"
-
-
-def test_me_returns_current_user(api, normal_user, user_password):
-    login(api, password=user_password)
-
-    res = api.get(ME_URL)
+def test_me_is_public_and_reports_anonymous(api):
+    res = api.get(ME)
 
     assert res.status_code == 200
-    assert res.data["employee_no"] == "A1234"
+    assert res.data == {"authenticated": False, "user": None}
 
 
-def test_logout_clears_session(api, normal_user, user_password):
-    login(api, password=user_password)
+def test_session_is_cut_when_approval_is_revoked(api, normal_user, user_password):
+    """AC-01-8 — 로그인 후 승인 상태가 바뀌면 살아 있는 세션도 업무 API 를 못 쓴다."""
+    api.post(LOGIN, {"username": "hong", "password": user_password}, format="json")
+    normal_user.approval_status = ApprovalStatus.PENDING
+    normal_user.save()
 
-    assert api.post(LOGOUT_URL).status_code == 204
-    assert api.get(ME_URL).status_code == 401
+    assert api.patch(ME, {"organization": "x"}, format="json").status_code == 403
+    assert api.get(ME).data["authenticated"] is False
 
 
-# --- 비밀번호 변경 (specs/01 §6) ---
+def test_update_own_profile(api, normal_user):
+    api.force_authenticate(normal_user)
+
+    res = api.patch(ME, {"organization": "기술팀", "role": "ADMIN"}, format="json")
+
+    assert res.status_code == 200
+    normal_user.refresh_from_db()
+    assert normal_user.organization == "기술팀"
+    assert normal_user.role == "USER"  # 역할은 바꿀 수 없다
 
 
-def test_change_password_clears_must_change_flag(api, normal_user, user_password):
+def test_logout(api, normal_user, user_password):
+    api.post(LOGIN, {"username": "hong", "password": user_password}, format="json")
+
+    assert api.post(LOGOUT).status_code == 204
+    assert api.get(ME).data["authenticated"] is False
+
+
+# --- 비밀번호 변경 ---
+
+
+def test_change_password_clears_flag(api, normal_user, user_password):
     normal_user.must_change_password = True
-    normal_user.save(update_fields=["must_change_password"])
-    login(api, password=user_password)
+    normal_user.save()
+    api.post(LOGIN, {"username": "hong", "password": user_password}, format="json")
 
     res = api.post(
-        CHANGE_PW_URL,
-        {"current_password": user_password, "new_password": "newpw123"},
+        PASSWORD,
+        {"current_password": user_password, "new_password": "brand-new-7"},
         format="json",
     )
 
     assert res.status_code == 204
     normal_user.refresh_from_db()
-    assert normal_user.check_password("newpw123")
+    assert normal_user.check_password("brand-new-7")
     assert normal_user.must_change_password is False
-    # 변경 후에도 세션이 유지된다.
-    assert api.get(ME_URL).status_code == 200
+    assert api.get(ME).data["authenticated"] is True  # 세션 유지
 
 
-def test_change_password_rejects_wrong_current(api, normal_user, user_password):
-    login(api, password=user_password)
+def test_change_password_requires_current(api, normal_user):
+    api.force_authenticate(normal_user)
 
     res = api.post(
-        CHANGE_PW_URL,
-        {"current_password": "nope", "new_password": "newpw123"},
-        format="json",
+        PASSWORD, {"current_password": "wrong-pass-1", "new_password": "brand-new-7"}, format="json"
     )
 
     assert res.status_code == 400
     assert res.data["error"]["code"] == "INVALID_CURRENT_PASSWORD"
-    normal_user.refresh_from_db()
-    assert normal_user.check_password(user_password)
 
 
-def test_change_password_enforces_min_length_4(api, normal_user, user_password):
-    """specs/01 §6 — MinimumLengthValidator(4) 만 활성화한다."""
-    login(api, password=user_password)
+def test_change_password_applies_policy(api, normal_user, user_password):
+    api.force_authenticate(normal_user)
 
     res = api.post(
-        CHANGE_PW_URL,
-        {"current_password": user_password, "new_password": "ab"},
-        format="json",
+        PASSWORD, {"current_password": user_password, "new_password": "12345678"}, format="json"
     )
 
     assert res.status_code == 400
-    assert res.data["error"]["code"] == "VALIDATION_ERROR"
-    assert "new_password" in res.data["error"]["details"]
-
-
-def test_short_but_valid_password_qwer_is_accepted(db):
-    """기본 관리자 비밀번호 'qwer'(4자)가 정책상 허용되어야 한다."""
-    from django.contrib.auth.password_validation import validate_password
-
-    validate_password("qwer")  # 예외가 나지 않아야 한다.
-
-
-# --- 에러 포맷 (AC-15-3) ---
-
-
-def test_ac_15_3_error_format_is_consistent(api, db):
-    res = api.post(LOGIN_URL, {"employee_no": "A1234"}, format="json")
-
-    assert res.status_code == 400
-    assert set(res.data.keys()) == {"error"}
-    assert res.data["error"]["code"] == "VALIDATION_ERROR"
-    assert "full_name" in res.data["error"]["details"]
-
-
-def test_csrf_endpoint_is_public(api, db):
-    res = api.get("/api/auth/csrf/")
-
-    assert res.status_code == 200
-    assert res.data["csrf_token"]
-
-
-def test_login_history_records_failure_reason(api, normal_user):
-    login(api, password="wrong")
-
-    history = LoginHistory.objects.get()
-    assert history.success is False
-    assert history.fail_reason == "BAD_PASSWORD"
-    assert history.attempted_employee_no == "A1234"
-
-
-def test_employee_no_is_normalized_to_uppercase(api, db, user_password):
-    User.objects.create_user(employee_no="C9999", full_name="이순신", password=user_password)
-
-    res = login(api, employee_no="c9999", full_name="이순신", password=user_password)
-
-    assert res.status_code == 200
-
-
-def test_login_url_name_resolves():
-    assert reverse("auth-login") == LOGIN_URL
